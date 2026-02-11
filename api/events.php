@@ -1,8 +1,8 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 $page_title = "Upcoming Hackathons | HackHub";
-include '../includes/header.php';
+include __DIR__ . '/../includes/header.php';
 
 // Fetch All Upcoming Events
 $sql = "SELECT * FROM hackathons WHERE event_start >= NOW() ORDER BY event_start ASC";

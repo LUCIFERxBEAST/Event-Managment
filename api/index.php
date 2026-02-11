@@ -1,8 +1,8 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 $page_title = "HackHub | The Future of Hackathon Management";
-include '../includes/header.php';
+include __DIR__ . '/../includes/header.php';
 
 // Fetch Real Stats
 // 1. Active Hackathons
