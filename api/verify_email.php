@@ -2,45 +2,51 @@
 session_start();
 include __DIR__ . '/../config/db.php';
 
-// Security: If no temp user exists, go back to register
-if (!isset($_SESSION['temp_user'])) {
+// Security: If no email param, go back to register
+if (!isset($_GET['email'])) {
     header("Location: register.php");
     exit();
 }
 
-$userData = $_SESSION['temp_user'];
+$email = $_GET['email'];
 $error = "";
 
+// Fetch User Data to display name/email
+$stmt = $conn->prepare("SELECT * FROM users WHERE email = :email");
+$stmt->execute(['email' => $email]);
+$userData = $stmt->fetch();
+
+if (!$userData) {
+    die("❌ Error user not found. Please register again.");
+}
+
 if (isset($_POST['verify'])) {
-    $entered_otp = $_POST['otp'];
+    $entered_otp = trim($_POST['otp']);
 
-    if ($entered_otp == $userData['otp']) {
-        // ✅ MATCHED!
-        // ✅ MATCHED!
-        // REMOVED 'mobile' from this query
-        $stmt = $conn->prepare("INSERT INTO users (name, email, password, skills) VALUES (:name, :email, :password, :skills)");
+    // Check DB OTP
+    if ($entered_otp == $userData['otp_code']) {
 
-        if ($stmt->execute([
-        'name' => $userData['name'],
-        'email' => $userData['email'],
-        'password' => $userData['password'],
-        'skills' => $userData['skills']
-        ])) {
-            $_SESSION['user_id'] = $conn->lastInsertId();
+        // CHECK EXPIRY
+        if (strtotime($userData['otp_expiry']) < time()) {
+            $error = "❌ OTP Expired! Please login to request a new one.";
+        }
+        else {
+            // ✅ MATCHED!
+            $_SESSION['user_id'] = $userData['id'];
             $_SESSION['user_name'] = $userData['name'];
-            $_SESSION['user_skills'] = $userData['skills'];
+            $_SESSION['user_skills'] = explode(',', $userData['skills']);
 
-            unset($_SESSION['temp_user']);
+            // CLEAR OTP
+            $clear = $conn->prepare("UPDATE users SET otp_code = NULL, otp_expiry = NULL WHERE id = :id");
+            $clear->execute(['id' => $userData['id']]);
 
             echo "<script>alert('✅ Verification Successful!'); window.location.href = 'dashboard.php';</script>";
             exit();
         }
-        else {
-            $error = "Database Error: " . $stmt->error;
-        }
     }
     else {
         $error = "❌ Invalid OTP! Please try again.";
+    // Optional: Increment failed attempts here
     }
 }
 ?>

@@ -2,22 +2,29 @@
 session_start();
 include __DIR__ . '/../config/db.php';
 
-// Security: Kick out if they didn't pass Step 1
-if (!isset($_SESSION['temp_login_id'])) {
+// Security: Kick out if no email param
+if (!isset($_GET['email'])) {
     header("Location: login.php");
     exit();
 }
 
-$user_id = $_SESSION['temp_login_id'];
+$email = $_GET['email'];
 $error = "";
 
-if (isset($_POST['verify'])) {
-    $entered_otp = $_POST['otp'];
+// FETCH USER CONTEXT
+$stmt = $conn->prepare("SELECT id, name, skills, otp_code, otp_expiry, otp_failed_attempts FROM users WHERE email = :email");
+$stmt->execute(['email' => $email]);
+$user = $stmt->fetch();
 
-    // 1. GET CURRENT OTP STATUS FROM DB
-    $stmt = $conn->prepare("SELECT name, skills, otp_code, otp_expiry, otp_failed_attempts FROM users WHERE id = :id");
-    $stmt->execute(['id' => $user_id]);
-    $user = $stmt->fetch();
+if (!$user) {
+    header("Location: login.php?error=invalid_email");
+    exit();
+}
+
+$user_id = $user['id'];
+
+if (isset($_POST['verify'])) {
+    $entered_otp = trim($_POST['otp']);
 
     $current_time = date("Y-m-d H:i:s");
 
@@ -30,20 +37,16 @@ if (isset($_POST['verify'])) {
         $error = "⏳ OTP Expired! This code was only valid for 10 minutes. Please login again.";
     }
     // 🛠️ RULE 3: CODE MATCH CHECK
-    elseif ($entered_otp === $user['otp_code']) {
+    elseif ($entered_otp == $user['otp_code']) { // Loose comparison or strict? DB might be int/string.
         // ✅ SUCCESS!
 
         // Login the user fully
         $_SESSION['user_id'] = $user_id;
         $_SESSION['user_name'] = $user['name'];
-        $_SESSION['user_skills'] = $user['skills'];
+        $_SESSION['user_skills'] = explode(',', $user['skills']); // Ensure array
 
         // Cleanup: Remove OTP from DB so it can't be used twice
         $conn->query("UPDATE users SET otp_code=NULL, otp_failed_attempts=0 WHERE id=$user_id");
-
-        // Remove temp session
-        unset($_SESSION['temp_login_id']);
-        unset($_SESSION['temp_email']);
 
         header("Location: dashboard.php");
         exit();
@@ -58,7 +61,6 @@ if (isset($_POST['verify'])) {
 
         if ($attempts_left < 0) {
             // Force logout if limit hit
-            session_destroy();
             header("Location: login.php?error=locked");
             exit();
         }

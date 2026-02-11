@@ -23,15 +23,13 @@ if (isset($_POST['login'])) {
             $update = $conn->prepare("UPDATE users SET otp_code=:otp, otp_expiry=:expiry, otp_failed_attempts=0 WHERE id=:id");
             $update->execute(['otp' => $otp, 'expiry' => $expiry, 'id' => $row['id']]);
 
-            // 4. SAVE ID TO SESSION (For the next step)
-            $_SESSION['temp_login_id'] = $row['id'];
-            $_SESSION['temp_email'] = $email; // Used for "Simulated Email"
+            // 4. REDIRECT to Verification (Stateless)
+            // Passing email in URL instead of Session to support serverless environments
 
-            // 5. REDIRECT to Verification
-            // Note: passing OTP in URL purely for Localhost testing. Remove in production!
             include __DIR__ . '/../config/mail.php';
             sendOTP($email, $otp); // Send real email
-            header("Location: login_verify.php"); // Redirect securely
+
+            header("Location: login_verify.php?email=" . urlencode($email));
             exit();
         }
         else {

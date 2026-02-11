@@ -5,36 +5,42 @@ include __DIR__ . '/../config/db.php';
 if (isset($_POST['register'])) {
     $name = trim($_POST['name']);
     $email = trim($_POST['email']);
-    // REMOVED: $phone
     $pass = password_hash($_POST['password'], PASSWORD_DEFAULT);
+    $skills = isset($_POST['skills']) ? implode(",", $_POST['skills']) : "";
 
     // Check if email exists
     $stmt = $conn->prepare("SELECT id FROM users WHERE email = :email");
     $stmt->execute(['email' => $email]);
+
     if ($stmt->rowCount() > 0) {
-        $error = "❌ This email is already registered!";
+        $error = "❌ This email is already registered! Please Login.";
     }
     else {
         // GENERATE OTP
         $otp = rand(100000, 999999);
+        $expiry = date("Y-m-d H:i:s", strtotime("+10 minutes"));
 
-        // SAVE TO SESSION (No phone number here anymore)
-        $_SESSION['temp_user'] = [
-            'name' => $name,
-            'email' => $email,
-            'password' => $pass,
-            'skills' => isset($_POST['skills']) ? implode(",", $_POST['skills']) : "",
-            'otp' => $otp
-        ];
+        // INSERT IMMEDIATELY INTO DB (Stateless Registration)
+        $insert = $conn->prepare("INSERT INTO users (name, email, password, skills, otp_code, otp_expiry, otp_failed_attempts) VALUES (:name, :email, :password, :s, :otp, :expiry, 0)");
 
-        // SEND EMAIL
-        include __DIR__ . '/../config/mail.php';
-        if (sendOTP($email, $otp)) {
-            header("Location: verify_email.php");
+        if ($insert->execute([
+        'name' => $name,
+        'email' => $email,
+        'password' => $pass,
+        's' => $skills,
+        'otp' => $otp,
+        'expiry' => $expiry
+        ])) {
+            // SEND EMAIL
+            include __DIR__ . '/../config/mail.php';
+            sendOTP($email, $otp); // Best effort
+
+            // Redirect with Email (No Session Dependency)
+            header("Location: verify_email.php?email=" . urlencode($email));
             exit();
         }
         else {
-            $error = "Failed to send OTP. Check internet connection.";
+            $error = "Database Error: " . $conn->errorInfo()[2];
         }
     }
 }
