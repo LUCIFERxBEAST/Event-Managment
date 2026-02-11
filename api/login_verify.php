@@ -40,13 +40,30 @@ if (isset($_POST['verify'])) {
     elseif ($entered_otp == $user['otp_code']) { // Loose comparison or strict? DB might be int/string.
         // ✅ SUCCESS!
 
-        // Login the user fully
+        // 1. SESSION LOGIN (Standard)
         $_SESSION['user_id'] = $user_id;
         $_SESSION['user_name'] = $user['name'];
         $_SESSION['user_skills'] = explode(',', $user['skills']); // Ensure array
 
-        // Cleanup: Remove OTP from DB so it can't be used twice
-        $conn->query("UPDATE users SET otp_code=NULL, otp_failed_attempts=0 WHERE id=$user_id");
+        // 2. COOKIE LOGIN (Persistent "Remember Me")
+        // Generate a random token
+        $auth_token = bin2hex(random_bytes(32)); // 64 chars
+        $token_hash = hash('sha256', $auth_token);
+
+        // Store HASH in DB (Security Best Practice)
+        $update = $conn->prepare("UPDATE users SET otp_code=NULL, otp_failed_attempts=0, auth_token=:token WHERE id=:id");
+        $update->execute(['token' => $token_hash, 'id' => $user_id]);
+
+        // Store RAW TOKEN in Cookie (HTTP Only, Secure)
+        $cookie_time = time() + (86400 * 30); // 30 Days
+        setcookie('auth_token', $auth_token, [
+            'expires' => $cookie_time,
+            'path' => '/',
+            'domain' => '', // Current domain
+            'secure' => true, // Sent only over HTTPS
+            'httponly' => true, // Not accessible via JS
+            'samesite' => 'Lax'
+        ]);
 
         header("Location: dashboard.php");
         exit();
@@ -103,8 +120,7 @@ if (isset($_POST['verify'])) {
     <script>
         setTimeout(function () {
             alert("👨‍💻 [DEVELOPER ALERT]\n\nYour Login OTP is: <?php echo $_GET['simulated_otp']; ?>\n\n(It expires in 10 mins!)");
-        }, 500);
-    </script>
+    },    </script>
     <?php
 endif; ?>
 
