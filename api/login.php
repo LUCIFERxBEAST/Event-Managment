@@ -1,7 +1,7 @@
 <?php
 session_start();
-include '../config/db.php';
-include '../config/mail.php'; // 👈 Use the same mail config as register.php
+include __DIR__ . '/../config/db.php';
+include __DIR__ . '/../config/mail.php'; // 👈 Use the same mail config as register.php
 
 $error = "";
 

@@ -1,5 +1,5 @@
 <?php
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 try {
     echo "Testing Database Connection...\n";

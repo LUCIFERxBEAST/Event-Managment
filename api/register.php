@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 if (isset($_POST['register'])) {
     $name = trim($_POST['name']);
@@ -29,7 +29,7 @@ if (isset($_POST['register'])) {
         ];
 
         // SEND EMAIL
-        include '../config/mail.php';
+        include __DIR__ . '/../config/mail.php';
         if (sendOTP($email, $otp)) {
             header("Location: verify_email.php");
             exit();

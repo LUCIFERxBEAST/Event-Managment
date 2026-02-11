@@ -1,7 +1,7 @@
 <?php
 // api/chat_processor.php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 header('Content-Type: application/json');
 
 $input = json_decode(file_get_contents('php://input'), true);

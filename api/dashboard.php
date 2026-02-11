@@ -1,7 +1,7 @@
 <?php
 // dashboard.php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 // 1. Security Check
 if (!isset($_SESSION['user_id'])) {

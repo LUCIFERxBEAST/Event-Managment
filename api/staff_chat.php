@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 // Security Check
 if (!isset($_SESSION['staff_logged_in']) || $_SESSION['staff_role'] != 'Support') {
