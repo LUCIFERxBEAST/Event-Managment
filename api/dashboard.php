@@ -254,13 +254,13 @@ endif; ?>
     <script>
         let myEventIds = [
             <?php
-$attending_check = $conn->query("SELECT hackathon_id FROM registrations WHERE user_id = $user_id");
-$ids = [];
-if ($attending_check) {
-    while ($r = $attending_check->fetch()) {
-     $ids[] = $r['hackathon_id'];
-    }
-}
+$attending_check = $conn -> query("SELECT hackathon_id FROM registrations WHERE user_id = $user_id");
+        $ids = [];
+        if ($attending_check) {
+            while ($r = $attending_check -> fetch()) {
+                   $ids[] = $r['hackathon_id'];
+            }
+        }
 echo implode(',', $ids);
 ?>
         ];

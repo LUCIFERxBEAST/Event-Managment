@@ -37,19 +37,31 @@ if (isset($_POST['verify'])) {
         $error = "⏳ OTP Expired! This code was only valid for 10 minutes. Please login again.";
     }
     // 🛠️ RULE 3: CODE MATCH CHECK
-    elseif ($entered_otp == $user['otp_code']) { // Loose comparison or strict? DB might be int/string.
+    elseif ($entered_otp == $user['otp_code']) {
         // ✅ SUCCESS!
 
         // 1. SESSION LOGIN (Standard)
         $_SESSION['user_id'] = $user_id;
         $_SESSION['user_name'] = $user['name'];
-        $_SESSION['user_skills'] = explode(',', $user['skills']); // Ensure array
+        $_SESSION['user_skills'] = explode(',', $user['skills']);
 
-        // Clear OTP from database
-        $conn->query("UPDATE users SET otp_code=NULL, otp_failed_attempts=0 WHERE id=$user_id");
+        // 2. PERSISTENT AUTH: Generate and store auth token
+        $auth_token = bin2hex(random_bytes(32)); // Random 64-char token
+        $token_hash = hash('sha256', $auth_token); // Hash it for security
 
-        // TODO: Re-enable cookie-based "Remember Me" after running database migration
-        // See: api/force_migration_v2.php
+        // Store hash in database and clear OTP
+        $update = $conn->prepare("UPDATE users SET otp_code=NULL, otp_failed_attempts=0, auth_token=:token WHERE id=:id");
+        $update->execute(['token' => $token_hash, 'id' => $user_id]);
+
+        // Send raw token to browser as HTTP-only cookie (30 days)
+        setcookie('auth_token', $auth_token, [
+            'expires' => time() + (86400 * 30),
+            'path' => '/',
+            'domain' => '',
+            'secure' => true,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
 
         header("Location: dashboard.php");
         exit();
@@ -70,46 +82,48 @@ if (isset($_POST['verify'])) {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <title>Verify Login</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Verify Email - HackHub</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 
-<body class="bg-white d-flex align-items-center justify-content-center" style="height: 100vh;">
+<body>
+    <div class="auth-container">
+        <div class="auth-card glass-panel">
+            <h1>📧 Email Verification</h1>
+            <p>Enter the 6-digit code sent to <strong>
+                    <?php echo htmlspecialchars($email); ?>
+                </strong></p>
 
-    <div class="text-center" style="max-width: 350px;">
-        <h2 class="fw-bold">🛡️ Two-Step Auth</h2>
-        <p class="text-muted">Enter the code sent to your email.<br>It expires in <strong>10 minutes</strong>.</p>
-
-        <?php if ($error)
-    echo "<div class='alert alert-danger'>$error</div>"; ?>
-
-        <form method="POST">
-            <div class="mb-3">
-                <input type="number" name="otp" class="form-control text-center fs-2 fw-bold letter-spacing-2"
-                    placeholder="000000" autofocus required>
+            <?php if ($error): ?>
+            <div class="alert alert-danger">
+                <?php echo $error; ?>
             </div>
-            <button type="submit" name="verify" class="btn btn-primary w-100 btn-lg">Verify & Enter</button>
-        </form>
-
-        <div class="mt-4">
-            <a href="login.php" class="text-muted small text-decoration-none">← Back to Login</a>
-        </div>
-    </div>
-
-    <?php if (isset($_GET['simulated_otp'])): ?>
-    <script>
-        setTimeout(function () {
-            alert("👨‍💻 [DEVELOPER ALERT]\n\nYour Login OTP is: <?php echo $_GET['simulated_otp']; ?>\n\n(It expires in 10 mins!)");
-        },    </script>
-    <?php
+            <?php
 endif; ?>
 
+            <form method="POST">
+                <div class="form-group">
+                    <label>Verification Code</label>
+                    <input type="text" name="otp" placeholder="Enter 6-digit code" required maxlength="6"
+                        pattern="\d{6}" autofocus>
+                </div>
+
+                <button type="submit" name="verify" class="btn btn-primary btn-block">
+                    ✅ Verify & Continue
+                </button>
+            </form>
+
+            <p class="text-center mt-3">
+                <a href="login.php">← Back to Login</a>
+            </p>
+        </div>
+    </div>
 </body>
 
 </html>
