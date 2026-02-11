@@ -1,16 +1,29 @@
 <?php
-/* FILE: config/env.php - Environment Variable Loader */
+/* FILE: config/env.php - Environment Variable Loader (Local + Vercel Compatible) */
 
 /**
- * Load environment variables from .env file
+ * Load environment variables from .env file (local development)
+ * On Vercel/production, environment variables are already loaded by the platform
  * 
  * @param string $path Path to .env file
  * @return void
  */
 function loadEnv($path)
 {
+    // Check if environment variables are already set (Vercel, production environments)
+    // If DB_HOST is already set, skip loading from .env file
+    if (getenv('DB_HOST') !== false) {
+        return; // Already loaded by hosting platform
+    }
+
+    // Local development: Load from .env file
     if (!file_exists($path)) {
-        die("Error: .env file not found at $path. Please create it from .env.example");
+        // On Vercel, .env won't exist - that's OK, variables are set by platform
+        // Only die if we're in local development without the file
+        if (getenv('VERCEL') === false) {
+            die("Error: .env file not found at $path. Please create it from .env.example");
+        }
+        return;
     }
 
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
