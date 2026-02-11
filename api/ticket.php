@@ -1,6 +1,6 @@
 <?php
 session_start();
-include __DIR__ . '/../config/db.php';
+include '../config/db.php';
 
 // 1. Validate Request
 if (!isset($_GET['hash'])) {
@@ -18,9 +18,10 @@ $sql = "SELECT r.*, h.title, h.venue, h.event_start, h.event_end, u.name as part
         JOIN users u ON r.user_id = u.id
         WHERE r.qr_code_hash = ?";
 
-$stmt = $pdo->prepare($sql);
-$stmt->execute([$qr_hash]);
-$ticket = $stmt->fetch();
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("s", $qr_hash);
+$stmt->execute();
+$ticket = $stmt->get_result()->fetch_assoc();
 
 if (!$ticket) {
     die("❌ Ticket not found.");
@@ -32,195 +33,82 @@ if ($ticket['user_id'] != $user_id) {
 // Optional: You could redirect here, but for now we'll just show a warning
 // die("⛔ You do not have permission to view this ticket.");
 }
+
+$page_title = "Ticket | " . $ticket['title'];
+include '../includes/header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <title>Ticket |
-        <?php echo htmlspecialchars($ticket['title']); ?>
-    </title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-    <style>
-        body {
-            background-color: #1a1a2e;
-            /* Dark Theme */
-            color: white;
-            font-family: 'Courier New', Courier, monospace;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .ticket-card {
-            background: white;
-            color: black;
-            max-width: 400px;
-            width: 100%;
-            border-radius: 20px;
-            overflow: hidden;
-            position: relative;
-            box-shadow: 0 0 30px rgba(0, 114, 255, 0.4);
-        }
-
-        .ticket-header {
-            background: linear-gradient(45deg, #0d6efd, #0099ff);
-            padding: 20px;
-            text-align: center;
-            color: white;
-        }
-
-        .ticket-body {
-            padding: 30px;
-            text-align: center;
-        }
-
-        .qr-holder {
-            background: white;
-            padding: 15px;
-            border: 2px dashed #333;
-            display: inline-block;
-            margin: 20px 0;
-        }
-
-        .pin-box {
-            background: #eee;
-            padding: 10px;
-            font-size: 24px;
-            font-weight: bold;
-            letter-spacing: 5px;
-            cursor: pointer;
-            border-radius: 8px;
-            user-select: none;
-        }
-
-        .pin-box:hover {
-            background: #ddd;
-        }
-
-        .hidden-pin span {
-            filter: blur(5px);
-        }
-
-        /* Punch Hole Effect */
-        .punch-hole {
-            width: 40px;
-            height: 40px;
-            background: #1a1a2e;
-            border-radius: 50%;
-            position: absolute;
-            top: 180px;
-        }
-
-        .punch-left {
-            left: -20px;
-        }
-
-        .punch-right {
-            right: -20px;
-        }
-
-        .status-badge {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .status-registered {
-            background: white;
-            color: #0d6efd;
-        }
-
-        .status-present {
-            background: #198754;
-            color: white;
-            border: 2px solid white;
-        }
-    </style>
-</head>
-
-<body>
-
+<div class="ticket-wrapper fade-in">
     <div class="ticket-card">
         <div class="ticket-header">
-            <span
-                class="status-badge <?php echo ($ticket['status'] == 'Present') ? 'status-present' : 'status-registered'; ?>">
+            <span class="status-badge">
                 <?php echo $ticket['status']; ?>
             </span>
-            <h5 class="mb-0 text-uppercase fw-bold">Official Entry Pass</h5>
-            <small>Hackathon Hub ID</small>
+            <h5 style="margin: 0; font-weight: 800; letter-spacing: 1px;">OFFICIAL ENTRY</h5>
+            <small style="opacity: 0.8;">HackHub ID</small>
         </div>
 
-        <div class="punch-hole punch-left"></div>
-        <div class="punch-hole punch-right"></div>
-
         <div class="ticket-body">
-            <h4 class="fw-bold mb-1">
+            <h4 style="font-weight: 700; margin-bottom: 5px; color: var(--primary-color);">
                 <?php echo htmlspecialchars($ticket['title']); ?>
             </h4>
-            <p class="text-muted small mb-4">📍
+            <p style="color: #666; margin-bottom: 1.5rem; font-size: 0.9rem;">📍
                 <?php echo htmlspecialchars($ticket['venue']); ?>
             </p>
 
             <div class="qr-holder">
                 <div id="qrcode"></div>
             </div>
-            <p class="small text-muted">Scan this at the entrance</p>
+            <p style="font-size: 0.85rem; color: #999;">Scan at entrance</p>
 
-            <hr class="my-4">
+            <div style="border-top: 2px dashed #eee; margin: 2rem 0;"></div>
 
-            <div class="row text-start">
-                <div class="col-6">
-                    <small class="text-muted">PARTICIPANT</small><br>
-                    <strong>
+            <div style="display: flex; justify-content: space-between; text-align: left;">
+                <div style="width: 48%;">
+                    <small style="color: #999;font-size:0.7rem; font-weight:700;">PARTICIPANT</small><br>
+                    <strong style="font-size: 0.95rem;">
                         <?php echo htmlspecialchars($ticket['participant_name']); ?>
                     </strong>
                 </div>
-                <div class="col-6 text-end">
-                    <small class="text-muted">DATE</small><br>
-                    <strong>
+                <div style="width: 48%; text-align: right;">
+                    <small style="color: #999;font-size:0.7rem; font-weight:700;">DATE</small><br>
+                    <strong style="font-size: 0.95rem;">
                         <?php echo date('M d', strtotime($ticket['event_start'])); ?>
                     </strong>
                 </div>
             </div>
 
-            <div class="mt-4">
-                <small class="text-muted d-block mb-1">SECRET PIN (Tap to Show)</small>
+            <div style="margin-top: 2rem;">
+                <small
+                    style="color: #999; display: block; margin-bottom: 5px; font-size: 0.7rem; font-weight:700;">SECRET
+                    PIN (TAP TO REVEAL)</small>
                 <div class="pin-box hidden-pin" onclick="this.classList.toggle('hidden-pin')">
-                    <span>
+                    <span style="color: var(--secondary-color);">
                         <?php echo $ticket['access_pin']; ?>
                     </span>
                 </div>
             </div>
         </div>
 
-        <div class="p-3 bg-light text-center border-top">
-            <a href="dashboard.php" class="text-decoration-none text-muted small">← Back to Dashboard</a>
+        <div style="padding: 15px; background: #f8f9fa; text-align: center; border-top: 1px solid #eee;">
+            <a href="dashboard.php" style="font-size: 0.85rem; font-weight: 600; color: #999;">← Back to
+                Dashboard</a>
         </div>
     </div>
+</div>
 
-    <script type="text/javascript">
-        var qrData = "<?php echo $qr_hash; ?>"; // The unique hash
-        new QRCode(document.getElementById("qrcode"), {
-            text: qrData,
-            width: 150,
-            height: 150,
-            colorDark: "#000000",
-            colorLight: "#ffffff",
-            correctLevel: QRCode.CorrectLevel.H
-        });
-    </script>
+<script type="text/javascript">
+    var qrData = "<?php echo $qr_hash; ?>"; // The unique hash
+    // Clear previous if any (though logic is fresh)
+    document.getElementById("qrcode").innerHTML = "";
+    new QRCode(document.getElementById("qrcode"), {
+        text: qrData,
+        width: 150,
+        height: 150,
+        colorDark: "#2F2E41",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
+</script>
 
-</body>
-
-</html>
+<?php include '../includes/footer.php'; ?>

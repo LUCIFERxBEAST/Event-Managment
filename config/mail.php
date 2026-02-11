@@ -3,6 +3,7 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
+// Load PHPMailer
 require __DIR__ . '/../PHPMailer/src/Exception.php';
 require __DIR__ . '/../PHPMailer/src/PHPMailer.php';
 require __DIR__ . '/../PHPMailer/src/SMTP.php';
@@ -10,19 +11,18 @@ require __DIR__ . '/../PHPMailer/src/SMTP.php';
 // Load Credentials
 require_once __DIR__ . '/credentials.php';
 
-function sendOTP($toEmail, $otpCode)
-{
+function sendOTP($toEmail, $otpCode) {
     $mail = new PHPMailer(true);
 
     try {
         // 1. SERVER SETTINGS (Uses constants from credentials.php)
         $mail->isSMTP();
-        $mail->Host = SMTP_HOST;
-        $mail->SMTPAuth = true;
-        $mail->Username = SMTP_USER;
-        $mail->Password = SMTP_PASS;
+        $mail->Host       = SMTP_HOST;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = SMTP_USER;
+        $mail->Password   = SMTP_PASS;
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port = SMTP_PORT;
+        $mail->Port       = SMTP_PORT;
 
         // 2. SENDER & RECIPIENT
         $mail->setFrom(SMTP_USER, FROM_NAME);
@@ -31,7 +31,7 @@ function sendOTP($toEmail, $otpCode)
         // 3. CONTENT
         $mail->isHTML(true);
         $mail->Subject = '🔐 Your Login Verification Code';
-        $mail->Body = "
+        $mail->Body    = "
             <div style='font-family: sans-serif; background: #f4f4f4; padding: 20px;'>
                 <div style='background: white; padding: 20px; border-radius: 5px; text-align: center;'>
                     <h2>Verification Required</h2>
@@ -43,8 +43,7 @@ function sendOTP($toEmail, $otpCode)
 
         $mail->send();
         return true;
-    }
-    catch (Exception $e) {
+    } catch (Exception $e) {
         error_log("Mail Error: {$mail->ErrorInfo}");
         return false;
     }

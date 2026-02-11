@@ -1,6 +1,6 @@
 <?php
 // api/check_alerts.php
-include __DIR__ . '/../config/db.php';
+include '../config/db.php';
 header('Content-Type: application/json');
 
 // Get the list of hackathon IDs passed from the dashboard
@@ -18,7 +18,7 @@ $safe_ids = implode(',', $ids_array);
 
 // Check for ANY active alerts in these events
 $sql = "SELECT title, alert_message FROM hackathons WHERE id IN ($safe_ids) AND alert_message IS NOT NULL AND alert_message != ''";
-$result = $pdo->query($sql);
+$result = $conn->query($sql);
 
 if ($row = $result->fetch()) {
     echo json_encode([

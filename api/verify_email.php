@@ -1,7 +1,6 @@
 <?php
-ob_start();
 session_start();
-include __DIR__ . '/../config/db.php';
+include '../config/db.php';
 
 // Security: If no temp user exists, go back to register
 if (!isset($_SESSION['temp_user'])) {
@@ -18,10 +17,11 @@ if (isset($_POST['verify'])) {
     if ($entered_otp == $userData['otp']) {
         // ✅ MATCHED!
         // REMOVED 'mobile' from this query
-        $stmt = $pdo->prepare("INSERT INTO users (name, email, password, skills) VALUES (?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO users (name, email, password, skills) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("ssss", $userData['name'], $userData['email'], $userData['password'], $userData['skills']);
 
-        if ($stmt->execute([$userData['name'], $userData['email'], $userData['password'], $userData['skills']])) {
-            $_SESSION['user_id'] = $pdo->lastInsertId();
+        if ($stmt->execute()) {
+            $_SESSION['user_id'] = $stmt->insert_id;
             $_SESSION['user_name'] = $userData['name'];
             $_SESSION['user_skills'] = $userData['skills'];
 
@@ -31,7 +31,7 @@ if (isset($_POST['verify'])) {
             exit();
         }
         else {
-            $error = "Database Error: " . implode(" ", $stmt->errorInfo());
+            $error = "Database Error: " . $stmt->error;
         }
     }
     else {
@@ -44,33 +44,56 @@ if (isset($_POST['verify'])) {
 <html lang="en">
 
 <head>
-    <title>Verify Email</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Verify Email | HackHub</title>
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 </head>
 
-<body class="bg-white d-flex align-items-center justify-content-center" style="height: 100vh;">
+<body>
 
-    <div class="text-center">
-        <h2 class="fw-bold mb-3">📧 Check Your Email</h2>
-        <p class="text-muted">We sent a 6-digit code to <strong>
-                <?php echo htmlspecialchars($userData['email']); ?>
-            </strong></p>
+    <div class="container fade-in" style="max-width: 450px;">
+        <div class="glass-card text-center" style="padding: 3rem 2rem;">
 
-        <?php if ($error)
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📧</div>
+            <h2 style="font-weight: 700; margin-bottom: 1rem;">Check Your Email</h2>
+            <p style="color: #666; margin-bottom: 2rem;">
+                We sent a 6-digit code to <br>
+                <strong style="color: var(--primary-color);">
+                    <?php echo htmlspecialchars($userData['email']); ?>
+                </strong>
+            </p>
+
+            <?php if ($error)
     echo "<div class='alert alert-danger'>$error</div>"; ?>
 
-        <form method="POST" class="d-inline-block text-start" style="max-width: 300px;">
-            <div class="mb-3">
-                <label class="fw-bold">Enter Verification Code</label>
-                <input type="number" name="otp" class="form-control text-center text-primary fw-bold"
-                    style="font-size: 24px; letter-spacing: 5px;" placeholder="000000" required>
-            </div>
-            <button type="submit" name="verify" class="btn btn-primary w-100">Verify & Login</button>
-        </form>
+            <form method="POST">
+                <div class="form-group">
+                    <label class="form-label" style="text-align: left; width: 100%;">Enter Verification Code</label>
+                    <input type="number" name="otp" class="form-control"
+                        style="font-size: 2rem; letter-spacing: 10px; text-align: center; height: 60px; font-weight: 700; color: var(--primary-color);"
+                        placeholder="000000" required>
+                </div>
+                <button type="submit" name="verify" class="btn btn-primary" style="width: 100%; padding: 1rem;">Verify &
+                    Login</button>
+            </form>
 
-        <br><br>
-        <a href="register.php" class="text-muted small">Wrong email? Restart Registration</a>
+            <div style="margin-top: 2rem; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 1rem;">
+                <a href="register.php" style="color: #888; font-size: 0.9rem; text-decoration: none;">Wrong email?
+                    Restart Registration</a>
+            </div>
+        </div>
     </div>
 
 </body>

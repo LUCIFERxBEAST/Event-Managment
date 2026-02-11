@@ -1,173 +1,188 @@
 <?php
 session_start();
-include __DIR__ . '/../config/db.php';
+include '../config/db.php';
 
-// Security
+// 1. Security Check
 if (!isset($_SESSION['user_id']) || !isset($_GET['id'])) {
-    die("⛔ Access Denied");
+    header("Location: dashboard.php");
+    exit();
 }
 
-$event_id = intval($_GET['id']);
+$event_id = $_GET['id'];
 $user_id = $_SESSION['user_id'];
 
-// Check Ownership
-$stmt = $pdo->prepare("SELECT * FROM hackathons WHERE id = ? AND created_by = ?");
-$stmt->execute([$event_id, $user_id]);
-$event = $stmt->fetch();
+// 2. Fetch Event Data (Ensure YOU are the owner)
+$stmt = $conn->prepare("SELECT * FROM hackathons WHERE id = ? AND created_by = ?");
+$stmt->bind_param("ii", $event_id, $user_id);
+$stmt->execute();
+$event_result = $stmt->get_result();
+$event = $event_result->fetch_assoc();
 
-if (!$event) {
-    die("⛔ Access Denied");
-}
+if (!$event)
+    die("⛔ Access Denied. You are not the organizer of this event.");
 
-// --- ACTIONS ---
+// --- 📢 NEW: HANDLE EMERGENCY BROADCAST ---
 if (isset($_POST['broadcast_alert'])) {
-    $msg = $_POST['alert_msg'];
-    $stmt = $pdo->prepare("UPDATE hackathons SET alert_message = ? WHERE id = ?");
-    $stmt->execute([$msg, $event_id]);
+    $msg = $conn->real_escape_string($_POST['alert_msg']);
+    $conn->query("UPDATE hackathons SET alert_message = '$msg' WHERE id = $event_id");
+    // Refresh to show updated status
     header("Location: manage_event.php?id=$event_id&msg=sent");
     exit();
 }
 if (isset($_POST['clear_alert'])) {
-    $pdo->query("UPDATE hackathons SET alert_message = NULL WHERE id = $event_id");
+    $conn->query("UPDATE hackathons SET alert_message = NULL WHERE id = $event_id");
     header("Location: manage_event.php?id=$event_id&msg=cleared");
     exit();
 }
+// ------------------------------------------
+
+// 3. Handle "Add Staff" Action
 if (isset($_POST['add_staff'])) {
     $role = $_POST['role'];
     $staff_name = $_POST['name'];
-    $token = ($role == 'Guard' ? 'G-' : 'S-') . rand(1000, 9999);
-    $stmt = $pdo->prepare("INSERT INTO event_staff (hackathon_id, name, role, access_token) VALUES (?, ?, ?, ?)");
-    $stmt->execute([$event_id, $staff_name, $role, $token]);
+
+    // Generate Random Token (e.g., G-8291)
+    $prefix = ($role == 'Guard') ? 'G-' : 'S-';
+    $token = $prefix . rand(1000, 9999);
+
+    $ins = $conn->prepare("INSERT INTO event_staff (hackathon_id, name, role, access_token) VALUES (?, ?, ?, ?)");
+    $ins->bind_param("isss", $event_id, $staff_name, $role, $token);
+    $ins->execute();
 }
+
+// 4. Handle "Delete Staff"
 if (isset($_GET['delete_staff'])) {
-    $sid = intval($_GET['delete_staff']);
-    $stmt = $pdo->prepare("DELETE FROM event_staff WHERE id=? AND hackathon_id=?");
-    $stmt->execute([$sid, $event_id]);
+    $staff_id = $_GET['delete_staff'];
+    $conn->query("DELETE FROM event_staff WHERE id=$staff_id AND hackathon_id=$event_id");
     header("Location: manage_event.php?id=$event_id");
     exit();
 }
 
-$stmt_staff = $pdo->prepare("SELECT * FROM event_staff WHERE hackathon_id = ? ORDER BY role");
-$stmt_staff->execute([$event_id]);
-$staff_list = $stmt_staff->fetchAll();
+// 5. Fetch Current Staff
+$staff_list = $conn->query("SELECT * FROM event_staff WHERE hackathon_id = $event_id ORDER BY role");
+
+$page_title = "Manage: " . $event['title'] . " | HackHub";
+include '../includes/header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
+<div class="container my-5 fade-in">
 
-<head>
-    <title>Manage:
-        <?php echo htmlspecialchars($event['title']); ?>
-    </title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2 style="margin: 0;">⚙️ Command Center:
+            <?php echo htmlspecialchars($event['title']); ?>
+        </h2>
+        <a href="dashboard.php" class="btn btn-secondary">← Back</a>
+    </div>
 
-<body class="bg-light pb-5">
+    <?php if (isset($_GET['msg']) && $_GET['msg'] == 'sent'): ?>
+    <div class="alert alert-danger" style="text-align: center;">🚨 ALERT BROADCASTED SUCCESSFULLY!</div>
+    <?php
+elseif (isset($_GET['msg']) && $_GET['msg'] == 'cleared'): ?>
+    <div class="alert alert-success" style="text-align: center;">✅ Alert Cleared. System Normal.</div>
+    <?php
+endif; ?>
 
-    <div class="container my-5">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2>⚙️ Command Center:
-                <?php echo htmlspecialchars($event['title']); ?>
-            </h2>
-            <a href="dashboard.php" class="btn btn-outline-dark">← Dashboard</a>
+    <div class="grid-3" style="grid-template-columns: 1fr 1fr; align-items: start;">
+
+        <!-- Left Column -->
+        <div class="glass-card">
+            <h4 class="mb-3">👥 Assign Staff</h4>
+
+            <form method="POST" style="display: flex; gap: 10px; margin-bottom: 2rem;">
+                <input type="text" name="name" class="form-control" placeholder="Name (e.g. Rahul)" required
+                    style="flex: 2;">
+                <select name="role" class="form-control" style="flex: 1;">
+                    <option value="Guard">👮 Guard</option>
+                    <option value="Support">🎧 Support</option>
+                </select>
+                <button type="submit" name="add_staff" class="btn btn-primary">+ Add</button>
+            </form>
+
+            <h6 style="color: #666; margin-bottom: 1rem;">Active Tokens</h6>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <?php while ($s = $staff_list->fetch_assoc()): ?>
+                <div class="list-group-item">
+                    <div>
+                        <strong>
+                            <?php echo $s['role']; ?>:
+                        </strong>
+                        <?php echo $s['name']; ?>
+                        <br>
+                        <span class="badge bg-secondary" style="margin-top: 5px; letter-spacing: 1px;">
+                            <?php echo $s['access_token']; ?>
+                        </span>
+                    </div>
+                    <a href="?id=<?php echo $event_id; ?>&delete_staff=<?php echo $s['id']; ?>" class="btn btn-danger"
+                        style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">Revoke</a>
+                </div>
+                <?php
+endwhile; ?>
+                <?php if ($staff_list->num_rows == 0)
+    echo "<small class='text-muted'>No staff assigned yet.</small>"; ?>
+            </div>
         </div>
 
-        <?php if (isset($_GET['msg']) && $_GET['msg'] == 'sent') { ?>
-        <div class="alert alert-danger fw-bold text-center">🚨 ALERT BROADCASTED!</div>
-        <?php
-}
-elseif (isset($_GET['msg']) && $_GET['msg'] == 'cleared') { ?>
-        <div class="alert alert-success fw-bold text-center">✅ Alert Cleared.</div>
-        <?php
-}?>
+        <!-- Right Column -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
 
-        <div class="row g-4">
-
-            <div class="col-lg-6">
-
-                <div class="card shadow p-4 border-danger border-2 mb-4">
-                    <h5 class="text-danger fw-bold">📢 Emergency Broadcast</h5>
-                    <?php if (!empty($event['alert_message'])) { ?>
-                    <div class="alert alert-danger p-2 small text-center mb-3">
-                        Active: <strong>
-                            <?php echo htmlspecialchars($event['alert_message']); ?>
-                        </strong>
-                    </div>
-                    <?php
-}?>
-                    <form method="POST">
-                        <input type="text" name="alert_msg" class="form-control mb-2"
-                            placeholder="e.g. Lunch is served!" required>
-                        <div class="d-flex gap-2">
-                            <button type="submit" name="broadcast_alert" class="btn btn-danger w-100">Broadcast</button>
-                            <button type="submit" name="clear_alert" class="btn btn-outline-secondary">Clear</button>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="card shadow p-4 border-0">
-                    <h5 class="mb-3">👥 Event Staff</h5>
-                    <form method="POST" class="d-flex gap-2 mb-3">
-                        <input type="text" name="name" class="form-control form-control-sm" placeholder="Name" required>
-                        <select name="role" class="form-select form-select-sm" style="width: 100px;">
-                            <option value="Guard">Guard</option>
-                            <option value="Support">Support</option>
-                        </select>
-                        <button type="submit" name="add_staff" class="btn btn-primary btn-sm">+</button>
-                    </form>
-                    <ul class="list-group list-group-flush">
-                        <?php if (count($staff_list) > 0) {
-    foreach ($staff_list as $s) { ?>
-                        <li class="list-group-item d-flex justify-content-between align-items-center px-0">
-                            <div>
-                                <strong>
-                                    <?php echo htmlspecialchars($s['name']); ?>
-                                </strong> <small class="text-muted">(
-                                    <?php echo $s['role']; ?>)
-                                </small>
-                                <br><span class="badge bg-dark">
-                                    <?php echo $s['access_token']; ?>
-                                </span>
-                            </div>
-                            <a href="?id=<?php echo $event_id; ?>&delete_staff=<?php echo $s['id']; ?>"
-                                class="text-danger text-decoration-none">×</a>
-                        </li>
-                        <?php
-    }
-}?>
-                    </ul>
+            <div class="glass-card">
+                <h4 class="mb-3">🔗 Quick Links</h4>
+                <div style="display: grid; gap: 1rem;">
+                    <a href="guard_login.php" target="_blank" class="btn btn-secondary" style="text-align: left;">
+                        🛡️ <strong>Guard Login Page</strong> (Share this URL)
+                    </a>
+                    <a href="event_details.php?id=<?php echo $event_id; ?>" target="_blank" class="btn btn-primary"
+                        style="text-align: left;">
+                        🌍 <strong>Public Event Page</strong>
+                    </a>
                 </div>
             </div>
 
-            <div class="col-lg-6">
-
-                <div class="card shadow border-primary border-2 mb-4">
-                    <div class="card-body text-center p-5">
-                        <h3 class="mb-3">📊 Participants</h3>
-                        <p class="text-muted mb-4">View the full list, check attendance status, and download data to
-                            Excel.</p>
-                        <a href="participants.php?event_id=<?php echo $event_id; ?>"
-                            class="btn btn-primary btn-lg w-100 fw-bold">
-                            View & Manage Participants →
-                        </a>
-                    </div>
+            <div class="glass-card" style="border: 2px solid #ff4757; background: rgba(255, 71, 87, 0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="color: #ff4757; margin: 0;">📢 Emergency Alert</h4>
+                    <span class="badge bg-danger">ADMIN ONLY</span>
                 </div>
+                <p class="small text-muted" style="margin-bottom: 1rem;">Send a popup notification to all
+                    participant screens instantly.</p>
 
-                <div class="card shadow p-4 border-0">
-                    <h5 class="mb-3">🔗 Quick Links</h5>
-                    <div class="d-grid gap-2">
-                        <a href="guard_login.php" target="_blank" class="btn btn-outline-dark btn-sm text-start">🛡️
-                            Guard Login Page</a>
-                        <a href="event_details.php?id=<?php echo $event_id; ?>" target="_blank"
-                            class="btn btn-outline-primary btn-sm text-start">🌍 Public Event Page</a>
-                    </div>
+                <?php if (!empty($event['alert_message'])): ?>
+                <div class="alert alert-danger" style="text-align: center; margin-bottom: 1rem;">
+                    <strong>⚠️ ACTIVE NOW:</strong>
+                    <?php echo htmlspecialchars($event['alert_message']); ?>
                 </div>
+                <?php
+endif; ?>
 
+                <form method="POST">
+                    <div class="form-group">
+                        <textarea name="alert_msg" class="form-control" rows="2"
+                            placeholder="e.g. Lunch is served! / Fire Drill!" style="border-color: #ff4757;"
+                            required></textarea>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" name="broadcast_alert" class="btn btn-danger" style="flex: 1;">🔴
+                            BROADCAST</button>
+                        <button type="submit" name="clear_alert" class="btn btn-secondary">Clear</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="glass-card">
+                <h4 class="mb-3">🤖 AI Help Desk</h4>
+                <div class="alert alert-success">
+                    <p class="mb-0">
+                        <strong>Status:</strong> AI Active<br>
+                        Participants can ask questions. If the AI gets stuck, it will route tickets to your
+                        <strong>Support Staff</strong>.
+                    </p>
+                </div>
+                <button class="btn btn-secondary" style="width: 100%; opacity: 0.6; cursor: not-allowed;"
+                    disabled>Auto-Managed by AI</button>
             </div>
 
         </div>
     </div>
-</body>
+</div>
 
-</html>
+<?php include '../includes/footer.php'; ?>

@@ -1,8 +1,6 @@
 <?php
-ob_start();
 session_start();
-include __DIR__ . '/../config/db.php';
-include __DIR__ . '/../config/mail.php'; // 👈 Use the same mail config as register.php
+include '../config/db.php';
 
 $error = "";
 
@@ -10,39 +8,34 @@ if (isset($_POST['login'])) {
     $email = trim($_POST['email']);
     $pass = $_POST['password'];
 
-    // 1. Get user from DB
-    // Use named placeholders or ? with execute array
-    $stmt = $pdo->prepare("SELECT id, name, password, skills FROM users WHERE email = ?");
-    $stmt->execute([$email]);
+    $stmt = $conn->prepare("SELECT id, name, password FROM users WHERE email = :email");
+    $stmt->execute(['email' => $email]);
 
     if ($row = $stmt->fetch()) {
-        // 2. Verify Password
         if (password_verify($pass, $row['password'])) {
-
-            // 3. Generate OTP
+            // 1. GENERATE SECURE OTP
             $otp = rand(100000, 999999);
 
-            // 4. Store in TEMP session (Similar to your registration logic)
-            $_SESSION['temp_login'] = [
-                'id' => $row['id'],
-                'name' => $row['name'],
-                'email' => $email,
-                'skills' => $row['skills'],
-                'otp' => $otp
-            ];
+            // 2. SET EXPIRY (Current Time + 10 Minutes)
+            $expiry = date("Y-m-d H:i:s", strtotime("+10 minutes"));
 
-            // 5. Use your WORKING sendOTP function
-            if (sendOTP($email, $otp)) {
-                header("Location: login_verify.php");
-                exit();
-            }
-            else {
-                $error = "❌ Failed to send OTP. Please check your mail settings.";
-            }
+            // 3. UPDATE DATABASE (Reset attempts to 0)
+            $update = $conn->prepare("UPDATE users SET otp_code=:otp, otp_expiry=:expiry, otp_failed_attempts=0 WHERE id=:id");
+            $update->execute(['otp' => $otp, 'expiry' => $expiry, 'id' => $row['id']]);
 
+            // 4. SAVE ID TO SESSION (For the next step)
+            $_SESSION['temp_login_id'] = $row['id'];
+            $_SESSION['temp_email'] = $email; // Used for "Simulated Email"
+
+            // 5. REDIRECT to Verification
+            // Note: passing OTP in URL purely for Localhost testing. Remove in production!
+            include '../config/mail.php';
+            sendOTP($email, $otp); // Send real email
+            header("Location: login_verify.php"); // Redirect securely
+            exit();
         }
         else {
-            $error = "❌ Incorrect Password!";
+            $error = "❌ Wrong Password!";
         }
     }
     else {
@@ -51,33 +44,42 @@ if (isset($_POST['login'])) {
 }
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <title>Login | Secure Access</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
+<?php $page_title = "Login | Secure Access";
+include '../includes/header.php';
+?>
 
-<body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
-    <div class="card shadow p-4" style="max-width: 400px; width: 100%;">
-        <h3 class="text-center fw-bold mb-4">🔐 Secure Login</h3>
-        <?php if ($error)
-    echo "<div class='alert alert-danger'>$error</div>"; ?>
+<div class="container flex-center fade-in" style="min-height: 80vh;">
+    <div class="glass-card" style="max-width: 450px; width: 100%;">
+        <div class="text-center mb-4">
+            <h1 class="text-title">🔐</h1>
+            <h3 class="text-primary">Secure Login</h3>
+        </div>
+
+        <?php if ($error): ?>
+        <div class='alert alert-danger'>
+            <?php echo $error; ?>
+        </div>
+        <?php
+endif; ?>
+
         <form method="POST">
-            <div class="mb-3">
-                <label>Email Address</label>
-                <input type="email" name="email" class="form-control" required>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" placeholder="Email" required>
             </div>
-            <div class="mb-3">
-                <label>Password</label>
-                <input type="password" name="password" class="form-control" required>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" placeholder="Enter Password" required>
             </div>
-            <button type="submit" name="login" class="btn btn-primary w-100 fw-bold">Next: Verify Email ➝</button>
+            <button type="submit" name="login" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                Next: Send OTP ➝
+            </button>
         </form>
-        <p class="text-center mt-3 small">New user? <a href="register.php">Create Account</a></p>
+        <p class="text-center mt-4" style="font-size: 0.95rem;">
+            New here? <a href="register.php" style="color: var(--primary-color); font-weight: 600;">Create Account</a>
+        </p>
     </div>
-</body>
+</div>
 
-</html>
+<?php include '../includes/footer.php'; ?>

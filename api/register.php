@@ -1,10 +1,6 @@
 <?php
-ob_start();
 session_start();
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-include __DIR__ . '/../config/db.php';
+include '../config/db.php';
 
 if (isset($_POST['register'])) {
     $name = trim($_POST['name']);
@@ -13,10 +9,9 @@ if (isset($_POST['register'])) {
     $pass = password_hash($_POST['password'], PASSWORD_DEFAULT);
 
     // Check if email exists
-    $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ?");
-    $stmt->execute([$email]);
-
-    if ($stmt->fetch()) {
+    $stmt = $conn->prepare("SELECT id FROM users WHERE email = :email");
+    $stmt->execute(['email' => $email]);
+    if ($stmt->rowCount() > 0) {
         $error = "❌ This email is already registered!";
     }
     else {
@@ -32,94 +27,69 @@ if (isset($_POST['register'])) {
             'otp' => $otp
         ];
 
-        // START DEBUG: Bypass Email if on localhost or invalid config
-        // include __DIR__ . '/../config/mail.php';
-        // if (sendOTP($email, $otp)) {
-        //     header("Location: verify_email.php");
-        //     exit();
-        // }
-        // END DEBUG
-
-        include __DIR__ . '/../config/mail.php';
+        // SEND EMAIL
+        include '../config/mail.php';
         if (sendOTP($email, $otp)) {
             header("Location: verify_email.php");
             exit();
         }
         else {
-            // Check error log for details
-            $error = "Failed to send OTP. Please check your internet connection or mail configuration.";
+            $error = "Failed to send OTP. Check internet connection.";
         }
     }
 }
 ?>
 
-<!DOCTYPE html>
-<html>
 
-<head>
-    <title>Create Account</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        .skill-check {
-            display: none;
-        }
+<?php $page_title = "Create Account | HackHub";
+include '../includes/header.php';
+?>
 
-        .skill-label {
-            cursor: pointer;
-            padding: 8px 15px;
-            border: 1px solid #0d6efd;
-            border-radius: 20px;
-            display: inline-block;
-            margin: 2px;
-            color: #0d6efd;
-        }
-
-        .skill-check:checked+.skill-label {
-            background-color: #0d6efd;
-            color: white;
-        }
-    </style>
-</head>
-
-<body class="bg-light d-flex align-items-center justify-content-center" style="min-height: 100vh;">
-
-    <div class="card shadow p-4 m-3" style="max-width: 500px; width: 100%;">
-        <h3 class="text-center mb-3">🚀 Hackathon Hub</h3>
+<div class="container fade-in" style="max-width: 550px; margin-top: 5rem;">
+    <div class="glass-card">
+        <h3 class="text-center mb-3 text-primary">🚀 Join HackHub</h3>
 
         <?php if (isset($error))
     echo "<div class='alert alert-danger'>$error</div>"; ?>
 
         <form method="POST">
-            <div class="mb-3">
-                <label>Name</label>
-                <input type="text" name="name" class="form-control" required>
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" name="name" class="form-control" placeholder="Name" required>
             </div>
 
-            <div class="mb-3">
-                <label>Email</label>
-                <input type="email" name="email" class="form-control" required>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" name="email" class="form-control" placeholder="Email" required>
             </div>
 
-            <div class="mb-3">
-                <label class="fw-bold mb-2">Interests</label><br>
+            <div class="form-group">
+                <label class="form-label mb-2">Your Interests / Skills</label><br>
                 <input type="checkbox" name="skills[]" value="Web Dev" id="s1" class="skill-check"> <label for="s1"
                     class="skill-label">🌐 Web Dev</label>
                 <input type="checkbox" name="skills[]" value="AI/ML" id="s2" class="skill-check"> <label for="s2"
                     class="skill-label">🤖 AI/ML</label>
                 <input type="checkbox" name="skills[]" value="Design" id="s3" class="skill-check"> <label for="s3"
                     class="skill-label">🎨 Design</label>
+                <input type="checkbox" name="skills[]" value="Cloud" id="s4" class="skill-check"> <label for="s4"
+                    class="skill-label">☁️ Cloud</label>
+                <input type="checkbox" name="skills[]" value="Mobile" id="s5" class="skill-check"> <label for="s5"
+                    class="skill-label">📱 Mobile</label>
             </div>
 
-            <div class="mb-3">
-                <label>Password</label>
-                <input type="password" name="password" class="form-control" required>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" placeholder="Enter Password" required>
             </div>
-            <button type="submit" name="register" class="btn btn-primary w-100 btn-lg">Next: Verify Email ➝</button>
+            <button type="submit" name="register" class="btn btn-primary" style="width: 100%; margin-bottom: 1rem;">
+                Next: Verify Email ➝
+            </button>
         </form>
-        <p class="text-center mt-3">Already have an account? <a href="login.php">Login</a></p>
+        <p class="text-center mt-3" style="font-size: 0.9rem;">
+            Already have an account? <a href="login.php"
+                style="color: var(--primary-color); font-weight: 600;">Login</a>
+        </p>
     </div>
+</div>
 
-</body>
-
-</html>
+<?php include '../includes/footer.php'; ?>
