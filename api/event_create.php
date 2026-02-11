@@ -37,11 +37,11 @@ if (!isset($_SESSION['user_id'])) {
 
 // 2. Handle Form Submission
 if (isset($_POST['create_event'])) {
-    $title = $conn->real_escape_string($_POST['title']);
+    $title = $_POST['title'];
     $start = $_POST['start_date'] . ' ' . $_POST['start_time']; // Combine Date+Time
     $end = $_POST['end_date'] . ' ' . $_POST['end_time'];
-    $venue = $conn->real_escape_string($_POST['venue']);
-    $desc = $conn->real_escape_string($_POST['description']);
+    $venue = $_POST['venue'];
+    $desc = $_POST['description'];
     $creator_id = $_SESSION['user_id'];
 
     // Process Tags (Array to String)
