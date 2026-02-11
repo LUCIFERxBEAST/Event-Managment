@@ -2,11 +2,43 @@
 session_start();
 include __DIR__ . '/../config/db.php';
 
-// 1. Security Check
-if (!isset($_SESSION['user_id']) || !isset($_GET['id'])) {
+// 1. Security Check with Persistent Auth (Vercel-compatible)
+if (!isset($_SESSION['user_id'])) {
+    if (isset($_COOKIE['auth_token'])) {
+        try {
+            $token_hash = hash('sha256', $_COOKIE['auth_token']);
+            $stmt = $conn->prepare("SELECT id, name, skills FROM users WHERE auth_token = :token");
+            $stmt->execute(['token' => $token_hash]);
+
+            if ($user = $stmt->fetch()) {
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_name'] = $user['name'];
+                $_SESSION['user_skills'] = explode(',', $user['skills']);
+            }
+            else {
+                setcookie('auth_token', '', time() - 3600, '/');
+                header("Location: login.php?error=invalid_token");
+                exit();
+            }
+        }
+        catch (PDOException $e) {
+            error_log("Auth token error: " . $e->getMessage());
+            setcookie('auth_token', '', time() - 3600, '/');
+            header("Location: login.php?error=db_error");
+            exit();
+        }
+    }
+    else {
+        header("Location: dashboard.php");
+        exit();
+    }
+}
+
+if (!isset($_GET['id'])) {
     header("Location: dashboard.php");
     exit();
 }
+
 
 $event_id = $_GET['id'];
 $user_id = $_SESSION['user_id'];
