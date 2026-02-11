@@ -12,23 +12,24 @@ $user_id = $_SESSION['user_id'];
 $event_id = intval($_GET['event_id']);
 
 // 2. Verify Ownership
-$check = $conn->query("SELECT title FROM hackathons WHERE id = $event_id AND created_by = $user_id");
-if (!$check || $check->num_rows == 0) {
+$stmt = $pdo->prepare("SELECT title FROM hackathons WHERE id = ? AND created_by = ?");
+$stmt->execute([$event_id, $user_id]);
+$check = $stmt->fetch();
+
+if (!$check) {
     die("⛔ You do not own this event.");
 }
-$event_name = $check->fetch_assoc()['title'];
+$event_name = $check['title'];
 
 // 3. Fetch Data (SAFE VERSION: NO DATES)
 $sql = "SELECT u.name, u.email, r.status 
         FROM registrations r 
         JOIN users u ON r.user_id = u.id 
-        WHERE r.hackathon_id = $event_id"; // Ordering by ID is safer if date is missing
+        WHERE r.hackathon_id = ?"; // Ordering by ID is safer if date is missing
 
-$result = $conn->query($sql);
+$stmt_exp = $pdo->prepare($sql);
+$stmt_exp->execute([$event_id]);
 
-if (!$result) {
-    die("❌ Export Error: " . $conn->error);
-}
 
 // 4. Download Headers
 // This forces the browser to download a file instead of showing text
@@ -42,10 +43,10 @@ $output = fopen('php://output', 'w');
 fputcsv($output, ['Full Name', 'Email Address', 'Status']);
 
 // Add Data Rows
-while ($row = $result->fetch_assoc()) {
+while ($row = $stmt_exp->fetch()) {
     fputcsv($output, [
-        $row['name'], 
-        $row['email'], 
+        $row['name'],
+        $row['email'],
         $row['status']
     ]);
 }

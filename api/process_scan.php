@@ -11,7 +11,7 @@ if (!isset($data['hash']) || !isset($data['event_id'])) {
     exit();
 }
 
-$hash = $conn->real_escape_string($data['hash']);
+$hash = $data['hash'];
 $guard_event_id = intval($data['event_id']); // The event the guard is guarding
 
 // 2. Search for the Ticket
@@ -19,23 +19,25 @@ $guard_event_id = intval($data['event_id']); // The event the guard is guarding
 $sql = "SELECT r.id, u.name, r.status 
         FROM registrations r 
         JOIN users u ON r.user_id = u.id 
-        WHERE r.qr_code_hash = '$hash' 
-        AND r.hackathon_id = $guard_event_id"; // <--- STRICT CHECK
+        WHERE r.qr_code_hash = ? 
+        AND r.hackathon_id = ?"; // <--- STRICT CHECK
 
-$result = $conn->query($sql);
+$stmt = $pdo->prepare($sql);
+$stmt->execute([$hash, $guard_event_id]);
+$row = $stmt->fetch();
 
-if ($result->num_rows > 0) {
-    $row = $result->fetch_assoc();
-
+if ($row) {
     // 3. Logic Checks
     if ($row['status'] == 'Present') {
         echo json_encode(['status' => 'error', 'message' => 'Already Inside!']);
-    } else {
+    }
+    else {
         // Mark them Present
-        $conn->query("UPDATE registrations SET status = 'Present' WHERE id = " . $row['id']);
+        $pdo->prepare("UPDATE registrations SET status = 'Present' WHERE id = ?")->execute([$row['id']]);
         echo json_encode(['status' => 'success', 'name' => $row['name']]);
     }
-} else {
+}
+else {
     // Ticket not found OR Ticket is for a different event
     echo json_encode(['status' => 'error', 'message' => 'Invalid Ticket for this Event']);
 }

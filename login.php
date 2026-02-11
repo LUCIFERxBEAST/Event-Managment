@@ -10,18 +10,17 @@ if (isset($_POST['login'])) {
     $pass = $_POST['password'];
 
     // 1. Get user from DB
-    $stmt = $conn->prepare("SELECT id, name, password, skills FROM users WHERE email = ?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $result = $stmt->get_result();
+    // Use named placeholders or ? with execute array
+    $stmt = $pdo->prepare("SELECT id, name, password, skills FROM users WHERE email = ?");
+    $stmt->execute([$email]);
 
-    if ($row = $result->fetch_assoc()) {
+    if ($row = $stmt->fetch()) {
         // 2. Verify Password
         if (password_verify($pass, $row['password'])) {
-            
+
             // 3. Generate OTP
             $otp = rand(100000, 999999);
-            
+
             // 4. Store in TEMP session (Similar to your registration logic)
             $_SESSION['temp_login'] = [
                 'id' => $row['id'],
@@ -32,17 +31,20 @@ if (isset($_POST['login'])) {
             ];
 
             // 5. Use your WORKING sendOTP function
-            if(sendOTP($email, $otp)) {
+            if (sendOTP($email, $otp)) {
                 header("Location: login_verify.php");
                 exit();
-            } else {
+            }
+            else {
                 $error = "❌ Failed to send OTP. Please check your mail settings.";
             }
 
-        } else {
+        }
+        else {
             $error = "❌ Incorrect Password!";
         }
-    } else {
+    }
+    else {
         $error = "❌ Email not found!";
     }
 }
@@ -50,15 +52,18 @@ if (isset($_POST['login'])) {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <title>Login | Secure Access</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
     <div class="card shadow p-4" style="max-width: 400px; width: 100%;">
         <h3 class="text-center fw-bold mb-4">🔐 Secure Login</h3>
-        <?php if($error) echo "<div class='alert alert-danger'>$error</div>"; ?>
+        <?php if ($error)
+    echo "<div class='alert alert-danger'>$error</div>"; ?>
         <form method="POST">
             <div class="mb-3">
                 <label>Email Address</label>
@@ -73,4 +78,5 @@ if (isset($_POST['login'])) {
         <p class="text-center mt-3 small">New user? <a href="register.php">Create Account</a></p>
     </div>
 </body>
+
 </html>
