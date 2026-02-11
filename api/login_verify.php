@@ -45,32 +45,11 @@ if (isset($_POST['verify'])) {
         $_SESSION['user_name'] = $user['name'];
         $_SESSION['user_skills'] = explode(',', $user['skills']); // Ensure array
 
-        // 2. COOKIE LOGIN (Persistent "Remember Me")
-        try {
-            // Generate a random token
-            $auth_token = bin2hex(random_bytes(32)); // 64 chars
-            $token_hash = hash('sha256', $auth_token);
+        // Clear OTP from database
+        $conn->query("UPDATE users SET otp_code=NULL, otp_failed_attempts=0 WHERE id=$user_id");
 
-            // Store HASH in DB (Security Best Practice)
-            $update = $conn->prepare("UPDATE users SET otp_code=NULL, otp_failed_attempts=0, auth_token=:token WHERE id=:id");
-            $update->execute(['token' => $token_hash, 'id' => $user_id]);
-
-            // Store RAW TOKEN in Cookie (HTTP Only, Secure)
-            $cookie_time = time() + (86400 * 30); // 30 Days
-            setcookie('auth_token', $auth_token, [
-                'expires' => $cookie_time,
-                'path' => '/',
-                'domain' => '', // Current domain
-                'secure' => true, // Sent only over HTTPS
-                'httponly' => true, // Not accessible via JS
-                'samesite' => 'Lax'
-            ]);
-        }
-        catch (Exception $e) {
-            // Failsafe: If column 'auth_token' is missing, just clear OTP and proceed with Session
-            // This prevents the "Fatal Error" loop
-            $conn->query("UPDATE users SET otp_code=NULL, otp_failed_attempts=0 WHERE id=$user_id");
-        }
+        // TODO: Re-enable cookie-based "Remember Me" after running database migration
+        // See: api/force_migration_v2.php
 
         header("Location: dashboard.php");
         exit();
