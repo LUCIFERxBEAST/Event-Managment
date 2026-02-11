@@ -283,13 +283,12 @@ endif; ?>
         // Get IDs for polling
         let myEventIds = [
             <?php
-$stmt_check = $pdo -> prepare("SELECT hackathon_id FROM registrations WHERE user_id = ?");
-$stmt_check -> execute([$user_id]);
-$ids = $stmt_check -> fetchAll(PDO:: FETCH_COLUMN);
+$stmt_check = $pdo->prepare("SELECT hackathon_id FROM registrations WHERE user_id = ?");
+$stmt_check->execute([$user_id]);
+$ids = $stmt_check->fetchAll(PDO::FETCH_COLUMN);
 echo implode(',', $ids);
 ?>
         ];
-];
         let lastMsg = "";
 
         setInterval(() => {

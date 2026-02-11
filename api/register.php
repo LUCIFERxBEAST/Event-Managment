@@ -1,5 +1,9 @@
 <?php
+ob_start();
 session_start();
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 include __DIR__ . '/../config/db.php';
 
 if (isset($_POST['register'])) {
@@ -28,14 +32,22 @@ if (isset($_POST['register'])) {
             'otp' => $otp
         ];
 
-        // SEND EMAIL
+        // START DEBUG: Bypass Email if on localhost or invalid config
+        // include __DIR__ . '/../config/mail.php';
+        // if (sendOTP($email, $otp)) {
+        //     header("Location: verify_email.php");
+        //     exit();
+        // }
+        // END DEBUG
+
         include __DIR__ . '/../config/mail.php';
         if (sendOTP($email, $otp)) {
             header("Location: verify_email.php");
             exit();
         }
         else {
-            $error = "Failed to send OTP. Check internet connection.";
+            // Check error log for details
+            $error = "Failed to send OTP. Please check your internet connection or mail configuration.";
         }
     }
 }

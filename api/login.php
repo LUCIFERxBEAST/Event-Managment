@@ -1,4 +1,5 @@
 <?php
+ob_start();
 session_start();
 include __DIR__ . '/../config/db.php';
 include __DIR__ . '/../config/mail.php'; // 👈 Use the same mail config as register.php
