@@ -1,0 +1,42 @@
+<?php
+// api/process_scan.php
+header('Content-Type: application/json');
+include '../config/db.php';
+
+// 1. Get the JSON Data
+$data = json_decode(file_get_contents("php://input"), true);
+
+if (!isset($data['hash']) || !isset($data['event_id'])) {
+    echo json_encode(['status' => 'error', 'message' => 'Invalid Data']);
+    exit();
+}
+
+$hash = $conn->real_escape_string($data['hash']);
+$guard_event_id = intval($data['event_id']); // The event the guard is guarding
+
+// 2. Search for the Ticket
+// We explicitly check: Does this hash exist AND does it belong to this Event ID?
+$sql = "SELECT r.id, u.name, r.status 
+        FROM registrations r 
+        JOIN users u ON r.user_id = u.id 
+        WHERE r.qr_code_hash = '$hash' 
+        AND r.hackathon_id = $guard_event_id"; // <--- STRICT CHECK
+
+$result = $conn->query($sql);
+
+if ($result->num_rows > 0) {
+    $row = $result->fetch_assoc();
+
+    // 3. Logic Checks
+    if ($row['status'] == 'Present') {
+        echo json_encode(['status' => 'error', 'message' => 'Already Inside!']);
+    } else {
+        // Mark them Present
+        $conn->query("UPDATE registrations SET status = 'Present' WHERE id = " . $row['id']);
+        echo json_encode(['status' => 'success', 'name' => $row['name']]);
+    }
+} else {
+    // Ticket not found OR Ticket is for a different event
+    echo json_encode(['status' => 'error', 'message' => 'Invalid Ticket for this Event']);
+}
+?>
