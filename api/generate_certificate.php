@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 // 1. Security & Input Check
 if (!isset($_SESSION['user_id']) || !isset($_GET['event_id'])) {

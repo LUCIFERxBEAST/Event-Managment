@@ -1,7 +1,7 @@
 <?php
 // api/scan_verify.php
 header('Content-Type: application/json');
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 // 1. Get JSON Input
 $input = json_decode(file_get_contents('php://input'), true);

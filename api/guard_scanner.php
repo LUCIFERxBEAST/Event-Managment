@@ -5,7 +5,6 @@ if (!isset($_GET['id']))
 $event_id = $_GET['id'];
 ?>
 <!DOCTYPE html>
-<!DOCTYPE html>
 <html lang="en">
 
 <head>

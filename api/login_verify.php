@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 // Security: Kick out if they didn't pass Step 1
 if (!isset($_SESSION['temp_login_id'])) {

@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 $error = "";
 
@@ -29,7 +29,7 @@ if (isset($_POST['login'])) {
 
             // 5. REDIRECT to Verification
             // Note: passing OTP in URL purely for Localhost testing. Remove in production!
-            include '../config/mail.php';
+            include __DIR__ . '/../config/mail.php';
             sendOTP($email, $otp); // Send real email
             header("Location: login_verify.php"); // Redirect securely
             exit();
@@ -46,7 +46,7 @@ if (isset($_POST['login'])) {
 
 
 <?php $page_title = "Login | Secure Access";
-include '../includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container flex-center fade-in" style="min-height: 80vh;">
@@ -82,4 +82,4 @@ endif; ?>
     </div>
 </div>
 
-<?php include '../includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

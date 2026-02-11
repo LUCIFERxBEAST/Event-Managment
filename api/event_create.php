@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 // 1. Security: Only logged-in users can create events
 if (!isset($_SESSION['user_id'])) {
@@ -84,7 +84,7 @@ if (isset($_POST['create_event'])) {
 
 <body>
 
-    <?php include '../includes/header.php'; ?>
+    <?php include __DIR__ . '/../includes/header.php'; ?>
 
     <div class="container my-5 fade-in" style="max-width: 800px;">
         <div class="glass-card">

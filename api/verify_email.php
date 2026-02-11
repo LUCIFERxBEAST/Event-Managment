@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 // Security: If no temp user exists, go back to register
 if (!isset($_SESSION['temp_user'])) {

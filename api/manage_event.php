@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 // 1. Security Check
 if (!isset($_SESSION['user_id']) || !isset($_GET['id'])) {
@@ -68,7 +68,7 @@ $staff_list = $conn->prepare("SELECT * FROM event_staff WHERE hackathon_id = :ei
 $staff_list->execute(['eid' => $event_id]);
 
 $page_title = "Manage: " . $event['title'] . " | HackHub";
-include '../includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container my-5 fade-in">
@@ -191,4 +191,4 @@ endif; ?>
     </div>
 </div>
 
-<?php include '../includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

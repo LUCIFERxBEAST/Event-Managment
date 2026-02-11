@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 // 1. Security Check
 if (!isset($_SESSION['user_id'])) {
@@ -26,7 +26,8 @@ if (isset($_POST['update_profile'])) {
                 $_SESSION['user_skills'] = $skills;
                 $message = "<div class='alert alert-success'>✅ Profile updated successfully!</div>";
             }
-        } catch (PDOException $e) {
+        }
+        catch (PDOException $e) {
             $message = "<div class='alert alert-danger'>❌ Error updating profile: " . $e->getMessage() . "</div>";
         }
     }
@@ -55,7 +56,8 @@ if (isset($_POST['submit_feedback'])) {
 
                 $message = "<div class='alert alert-success'>✅ Thank you! Your feedback has been sent to our team.</div>";
             }
-        } catch (PDOException $e) {
+        }
+        catch (PDOException $e) {
             $message = "<div class='alert alert-danger'>❌ Error submitting feedback: " . $e->getMessage() . "</div>";
         }
     }
@@ -83,7 +85,7 @@ else {
 $skills_array = !empty($user['skills']) ? explode(',', $user['skills']) : [];
 
 $page_title = "My Profile | HackHub";
-include '../includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container my-5 fade-in">
@@ -221,4 +223,4 @@ endif; ?>
     </div>
 </div>
 
-<?php include '../includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

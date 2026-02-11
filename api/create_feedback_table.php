@@ -1,5 +1,5 @@
 <?php
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 $sql = "CREATE TABLE IF NOT EXISTS feedback (
     id SERIAL PRIMARY KEY,

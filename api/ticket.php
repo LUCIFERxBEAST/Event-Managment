@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 // 1. Validate Request
 if (!isset($_GET['hash'])) {
@@ -34,7 +34,7 @@ if ($ticket['user_id'] != $user_id) {
 }
 
 $page_title = "Ticket | " . $ticket['title'];
-include '../includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="ticket-wrapper fade-in">
@@ -110,4 +110,4 @@ include '../includes/header.php';
     });
 </script>
 
-<?php include '../includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

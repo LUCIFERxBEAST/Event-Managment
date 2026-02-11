@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 if (isset($_POST['register'])) {
     $name = trim($_POST['name']);
@@ -28,7 +28,7 @@ if (isset($_POST['register'])) {
         ];
 
         // SEND EMAIL
-        include '../config/mail.php';
+        include __DIR__ . '/../config/mail.php';
         if (sendOTP($email, $otp)) {
             header("Location: verify_email.php");
             exit();
@@ -42,7 +42,7 @@ if (isset($_POST['register'])) {
 
 
 <?php $page_title = "Create Account | HackHub";
-include '../includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container fade-in" style="max-width: 550px; margin-top: 5rem;">
@@ -92,4 +92,4 @@ include '../includes/header.php';
     </div>
 </div>
 
-<?php include '../includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

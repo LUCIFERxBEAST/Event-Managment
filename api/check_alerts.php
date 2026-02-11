@@ -1,6 +1,6 @@
 <?php
 // api/check_alerts.php
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 header('Content-Type: application/json');
 
 // Get the list of hackathon IDs passed from the dashboard

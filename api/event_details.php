@@ -1,6 +1,6 @@
 <?php
 session_start();
-include '../config/db.php';
+include __DIR__ . '/../config/db.php';
 
 if (!isset($_GET['id'])) {
     header("Location: dashboard.php");
@@ -59,7 +59,7 @@ if (isset($_POST['join_event']) && $user_id > 0 && !$is_registered) {
 
 <?php
 $page_title = $event['title'] . " | HackHub";
-include '../includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="container my-5 fade-in">
@@ -142,4 +142,4 @@ endif; ?>
     </div>
 </div>
 
-<?php include '../includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>
