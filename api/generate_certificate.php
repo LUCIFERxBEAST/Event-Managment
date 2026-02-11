@@ -18,7 +18,7 @@ $sql = "SELECT r.status, u.name, h.title, h.event_end
         WHERE r.user_id = $user_id AND r.hackathon_id = $event_id";
 
 $result = $conn->query($sql);
-$data = $result->fetch_assoc();
+$data = $result->fetch();
 
 // 3. CHECK 1: Did they attend?
 if (!$data || $data['status'] != 'Present') {

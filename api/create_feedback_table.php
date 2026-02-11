@@ -2,7 +2,7 @@
 include '../config/db.php';
 
 $sql = "CREATE TABLE IF NOT EXISTS feedback (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     user_id INT NOT NULL,
     event_id INT NOT NULL,
     rating INT NOT NULL,
@@ -12,12 +12,13 @@ $sql = "CREATE TABLE IF NOT EXISTS feedback (
     FOREIGN KEY (event_id) REFERENCES hackathons(id)
 )";
 
-if ($conn->query($sql) === TRUE) {
+try {
+    $conn->exec($sql);
     echo "Table 'feedback' created successfully";
 }
-else {
-    echo "Error creating table: " . $conn->error;
+catch (PDOException $e) {
+    echo "Error creating table: " . $e->getMessage();
 }
 
-$conn->close();
+$conn = null;
 ?>

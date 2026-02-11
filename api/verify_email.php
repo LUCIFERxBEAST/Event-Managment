@@ -16,12 +16,17 @@ if (isset($_POST['verify'])) {
 
     if ($entered_otp == $userData['otp']) {
         // ✅ MATCHED!
+        // ✅ MATCHED!
         // REMOVED 'mobile' from this query
-        $stmt = $conn->prepare("INSERT INTO users (name, email, password, skills) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("ssss", $userData['name'], $userData['email'], $userData['password'], $userData['skills']);
+        $stmt = $conn->prepare("INSERT INTO users (name, email, password, skills) VALUES (:name, :email, :password, :skills)");
 
-        if ($stmt->execute()) {
-            $_SESSION['user_id'] = $stmt->insert_id;
+        if ($stmt->execute([
+        'name' => $userData['name'],
+        'email' => $userData['email'],
+        'password' => $userData['password'],
+        'skills' => $userData['skills']
+        ])) {
+            $_SESSION['user_id'] = $conn->lastInsertId();
             $_SESSION['user_name'] = $userData['name'];
             $_SESSION['user_skills'] = $userData['skills'];
 

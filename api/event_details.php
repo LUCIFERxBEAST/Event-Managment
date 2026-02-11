@@ -11,10 +11,9 @@ $event_id = $_GET['id'];
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
 // 1. FETCH EVENT DETAILS
-$stmt = $conn->prepare("SELECT * FROM hackathons WHERE id = ?");
-$stmt->bind_param("i", $event_id);
-$stmt->execute();
-$event = $stmt->get_result()->fetch_assoc();
+$stmt = $conn->prepare("SELECT * FROM hackathons WHERE id = :id");
+$stmt->execute(['id' => $event_id]);
+$event = $stmt->fetch();
 
 if (!$event) {
     die("Event not found!");
@@ -26,7 +25,7 @@ $ticket_hash = "";
 
 if ($user_id > 0) {
     $check = $conn->query("SELECT qr_code_hash FROM registrations WHERE user_id = $user_id AND hackathon_id = $event_id");
-    if ($row = $check->fetch_assoc()) {
+    if ($row = $check->fetch()) {
         $is_registered = true;
         $ticket_hash = $row['qr_code_hash'];
     }
@@ -43,21 +42,22 @@ if (isset($_POST['join_event']) && $user_id > 0 && !$is_registered) {
     // For now, let's set a default '0000' and ask them to update it on the ticket page.
     $default_pin = "0000";
 
-    $stmt = $conn->prepare("INSERT INTO registrations (hackathon_id, user_id, qr_code_hash, access_pin) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("iiss", $event_id, $user_id, $qr_hash, $default_pin);
+    $stmt = $conn->prepare("INSERT INTO registrations (hackathon_id, user_id, qr_code_hash, access_pin) VALUES (:event_id, :user_id, :qr_hash, :pin)");
 
-    if ($stmt->execute()) {
-        // Success! Go straight to the ticket
-        echo "<script>alert('✅ Successfully Registered!'); window.location.href = 'ticket.php?hash=$qr_hash';</script>";
-        exit();
+    try {
+        if ($stmt->execute(['event_id' => $event_id, 'user_id' => $user_id, 'qr_hash' => $qr_hash, 'pin' => $default_pin])) {
+            // Success! Go straight to the ticket
+            echo "<script>alert('✅ Successfully Registered!'); window.location.href = 'ticket.php?hash=$qr_hash';</script>";
+            exit();
+        }
     }
-    else {
-        $error = "Registration failed: " . $conn->error;
+    catch (PDOException $e) {
+        $error = "Registration failed: " . $e->getMessage();
     }
 }
 ?>
 
-
+<?php
 $page_title = $event['title'] . " | HackHub";
 include '../includes/header.php';
 ?>

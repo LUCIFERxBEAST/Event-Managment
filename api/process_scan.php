@@ -19,9 +19,8 @@ $sql = "SELECT r.*, h.title, h.venue, h.event_start, h.event_end, u.name as part
         WHERE r.qr_code_hash = ?";
 
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("s", $qr_hash);
-$stmt->execute();
-$ticket = $stmt->get_result()->fetch_assoc();
+$stmt->execute([$qr_hash]);
+$ticket = $stmt->fetch();
 
 if (!$ticket) {
     die("❌ Ticket not found.");

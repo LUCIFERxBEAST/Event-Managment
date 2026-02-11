@@ -17,16 +17,17 @@ if (isset($_POST['update_profile'])) {
     $skills = trim($_POST['skills']);
 
     if (!empty($name)) {
-        $stmt = $conn->prepare("UPDATE users SET name = ?, skills = ? WHERE id = ?");
-        $stmt->bind_param("ssi", $name, $skills, $user_id);
+        $stmt = $conn->prepare("UPDATE users SET name = :name, skills = :skills WHERE id = :id");
+        $stmt->execute(['name' => $name, 'skills' => $skills, 'id' => $user_id]);
 
-        if ($stmt->execute()) {
-            $_SESSION['user_name'] = $name;
-            $_SESSION['user_skills'] = $skills;
-            $message = "<div class='alert alert-success'>✅ Profile updated successfully!</div>";
-        }
-        else {
-            $message = "<div class='alert alert-danger'>❌ Error updating profile: " . $conn->error . "</div>";
+        try {
+            if ($stmt->execute(['name' => $name, 'skills' => $skills, 'id' => $user_id])) {
+                $_SESSION['user_name'] = $name;
+                $_SESSION['user_skills'] = $skills;
+                $message = "<div class='alert alert-success'>✅ Profile updated successfully!</div>";
+            }
+        } catch (PDOException $e) {
+            $message = "<div class='alert alert-danger'>❌ Error updating profile: " . $e->getMessage() . "</div>";
         }
     }
     else {
@@ -41,20 +42,21 @@ if (isset($_POST['submit_feedback'])) {
     $feedback_msg = trim($_POST['feedback_message']);
 
     if ($rating > 0 && !empty($feedback_msg)) {
-        $stmt = $conn->prepare("INSERT INTO feedback (user_id, event_id, rating, message) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("iiis", $user_id, $event_id, $rating, $feedback_msg);
+        $stmt = $conn->prepare("INSERT INTO feedback (user_id, event_id, rating, message) VALUES (:uid, :eid, :rating, :msg)");
+        $stmt->execute(['uid' => $user_id, 'eid' => $event_id, 'rating' => $rating, 'msg' => $feedback_msg]);
 
-        if ($stmt->execute()) {
-            // Simulated Email to Admin
-            $admin_email = "admin@hackhub.com";
-            $subject = "New Event Feedback";
-            $email_content = "User ID: $user_id\nEvent ID: $event_id\nRating: $rating\nMessage: $feedback_msg";
-            // mail($admin_email, $subject, $email_content); // Commented out for local env
+        try {
+            if ($stmt->execute(['uid' => $user_id, 'eid' => $event_id, 'rating' => $rating, 'msg' => $feedback_msg])) {
+                // Simulated Email to Admin
+                $admin_email = "admin@hackhub.com";
+                $subject = "New Event Feedback";
+                $email_content = "User ID: $user_id\nEvent ID: $event_id\nRating: $rating\nMessage: $feedback_msg";
+                // mail($admin_email, $subject, $email_content); // Commented out for local env
 
-            $message = "<div class='alert alert-success'>✅ Thank you! Your feedback has been sent to our team.</div>";
-        }
-        else {
-            $message = "<div class='alert alert-danger'>❌ Error submitting feedback: " . $conn->error . "</div>";
+                $message = "<div class='alert alert-success'>✅ Thank you! Your feedback has been sent to our team.</div>";
+            }
+        } catch (PDOException $e) {
+            $message = "<div class='alert alert-danger'>❌ Error submitting feedback: " . $e->getMessage() . "</div>";
         }
     }
     else {
@@ -63,13 +65,12 @@ if (isset($_POST['submit_feedback'])) {
 }
 
 // 4. Fetch User Data (Source of Truth)
-$stmt = $conn->prepare("SELECT name, email, skills FROM users WHERE id = ?");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
+$stmt = $conn->prepare("SELECT name, email, skills FROM users WHERE id = :id");
+$stmt->execute(['id' => $user_id]);
+$user = $stmt->fetch();
 
-if ($result->num_rows > 0) {
-    $user = $result->fetch_assoc();
+if ($user) {
+// User found
 }
 else {
     // Fallback if user not found (shouldn't happen)
@@ -112,7 +113,7 @@ $sql_pending = "SELECT h.id, h.title FROM hackathons h
                         AND h.id NOT IN (SELECT event_id FROM feedback WHERE user_id = '$user_id')";
 $result_pending = $conn->query($sql_pending);
 
-if ($result_pending && $result_pending->num_rows > 0):
+if ($result_pending && $result_pending->rowCount() > 0):
 ?>
         <div class="glass-panel p-4 mb-5"
             style="border: 1px solid var(--accent-color); background: rgba(108, 99, 255, 0.05);">
@@ -120,7 +121,7 @@ if ($result_pending && $result_pending->num_rows > 0):
             <p class="text-muted mb-4">You recently organized an event that has ended. Please let us know how it went.
             </p>
 
-            <?php while ($event = $result_pending->fetch_assoc()): ?>
+            <?php while ($event = $result_pending->fetch()): ?>
             <div class="mb-4 pb-4" style="border-bottom: 1px solid rgba(255,255,255,0.1);">
                 <h5 class="mb-3">Event: <strong>
                         <?php echo htmlspecialchars($event['title']); ?>

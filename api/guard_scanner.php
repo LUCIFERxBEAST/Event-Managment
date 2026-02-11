@@ -197,7 +197,7 @@ $event_id = $_GET['id'];
 
     <script>
         let html5QrcodeScanner;
-        const eventId = <?php echo $event_id; ?>;
+        const eventId = <? php echo $event_id; ?>;
         let isScanning = true;
 
         function onScanSuccess(decodedText, decodedResult) {
@@ -205,7 +205,7 @@ $event_id = $_GET['id'];
             isScanning = false;
 
             // 1. Send to Backend
-            fetch('api/process_scan.php', {
+            fetch('api/scan_verify.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ qr_hash: decodedText, event_id: eventId })

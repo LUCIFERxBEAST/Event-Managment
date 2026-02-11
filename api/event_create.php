@@ -22,13 +22,25 @@ if (isset($_POST['create_event'])) {
 
     // Insert into Database
     $sql = "INSERT INTO hackathons (created_by, title, event_start, event_end, venue, description, event_tags) 
-            VALUES ('$creator_id', '$title', '$start', '$end', '$venue', '$desc', '$tags')";
+            VALUES (:creator, :title, :start, :end, :venue, :desc, :tags)";
 
-    if ($conn->query($sql)) {
-        echo "<script>alert('✅ Event Created Successfully!'); window.location.href = 'dashboard.php';</script>";
+    $stmt = $conn->prepare($sql);
+
+    try {
+        if ($stmt->execute([
+        'creator' => $creator_id,
+        'title' => $title,
+        'start' => $start,
+        'end' => $end,
+        'venue' => $venue,
+        'desc' => $desc,
+        'tags' => $tags
+        ])) {
+            echo "<script>alert('✅ Event Created Successfully!'); window.location.href = 'dashboard.php';</script>";
+        }
     }
-    else {
-        $error = "Error: " . $conn->error;
+    catch (PDOException $e) {
+        $error = "Error: " . $e->getMessage();
     }
 }
 ?>

@@ -12,25 +12,25 @@ $event_id = $_GET['id'];
 $user_id = $_SESSION['user_id'];
 
 // 2. Fetch Event Data (Ensure YOU are the owner)
-$stmt = $conn->prepare("SELECT * FROM hackathons WHERE id = ? AND created_by = ?");
-$stmt->bind_param("ii", $event_id, $user_id);
-$stmt->execute();
-$event_result = $stmt->get_result();
-$event = $event_result->fetch_assoc();
+$stmt = $conn->prepare("SELECT * FROM hackathons WHERE id = :id AND created_by = :user_id");
+$stmt->execute(['id' => $event_id, 'user_id' => $user_id]);
+$event = $stmt->fetch();
 
 if (!$event)
     die("⛔ Access Denied. You are not the organizer of this event.");
 
 // --- 📢 NEW: HANDLE EMERGENCY BROADCAST ---
 if (isset($_POST['broadcast_alert'])) {
-    $msg = $conn->real_escape_string($_POST['alert_msg']);
-    $conn->query("UPDATE hackathons SET alert_message = '$msg' WHERE id = $event_id");
+    $msg = $_POST['alert_msg'];
+    $stmt = $conn->prepare("UPDATE hackathons SET alert_message = :msg WHERE id = :id");
+    $stmt->execute(['msg' => $msg, 'id' => $event_id]);
     // Refresh to show updated status
     header("Location: manage_event.php?id=$event_id&msg=sent");
     exit();
 }
 if (isset($_POST['clear_alert'])) {
-    $conn->query("UPDATE hackathons SET alert_message = NULL WHERE id = $event_id");
+    $stmt = $conn->prepare("UPDATE hackathons SET alert_message = NULL WHERE id = :id");
+    $stmt->execute(['id' => $event_id]);
     header("Location: manage_event.php?id=$event_id&msg=cleared");
     exit();
 }
@@ -45,21 +45,27 @@ if (isset($_POST['add_staff'])) {
     $prefix = ($role == 'Guard') ? 'G-' : 'S-';
     $token = $prefix . rand(1000, 9999);
 
-    $ins = $conn->prepare("INSERT INTO event_staff (hackathon_id, name, role, access_token) VALUES (?, ?, ?, ?)");
-    $ins->bind_param("isss", $event_id, $staff_name, $role, $token);
-    $ins->execute();
+    $ins = $conn->prepare("INSERT INTO event_staff (hackathon_id, name, role, access_token) VALUES (:eid, :name, :role, :token)");
+    $ins->execute([
+        'eid' => $event_id,
+        'name' => $staff_name,
+        'role' => $role,
+        'token' => $token
+    ]);
 }
 
 // 4. Handle "Delete Staff"
 if (isset($_GET['delete_staff'])) {
     $staff_id = $_GET['delete_staff'];
-    $conn->query("DELETE FROM event_staff WHERE id=$staff_id AND hackathon_id=$event_id");
+    $del = $conn->prepare("DELETE FROM event_staff WHERE id=:sid AND hackathon_id=:eid");
+    $del->execute(['sid' => $staff_id, 'eid' => $event_id]);
     header("Location: manage_event.php?id=$event_id");
     exit();
 }
 
 // 5. Fetch Current Staff
-$staff_list = $conn->query("SELECT * FROM event_staff WHERE hackathon_id = $event_id ORDER BY role");
+$staff_list = $conn->prepare("SELECT * FROM event_staff WHERE hackathon_id = :eid ORDER BY role");
+$staff_list->execute(['eid' => $event_id]);
 
 $page_title = "Manage: " . $event['title'] . " | HackHub";
 include '../includes/header.php';
@@ -100,7 +106,7 @@ endif; ?>
 
             <h6 style="color: #666; margin-bottom: 1rem;">Active Tokens</h6>
             <div style="max-height: 400px; overflow-y: auto;">
-                <?php while ($s = $staff_list->fetch_assoc()): ?>
+                <?php while ($s = $staff_list->fetch()): ?>
                 <div class="list-group-item">
                     <div>
                         <strong>
@@ -117,7 +123,7 @@ endif; ?>
                 </div>
                 <?php
 endwhile; ?>
-                <?php if ($staff_list->num_rows == 0)
+                <?php if ($staff_list->rowCount() == 0)
     echo "<small class='text-muted'>No staff assigned yet.</small>"; ?>
             </div>
         </div>
