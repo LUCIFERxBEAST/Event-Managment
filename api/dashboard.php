@@ -2,10 +2,43 @@
 session_start();
 include __DIR__ . '/../config/db.php';
 
-// 1. Security Check (Session Only - Cookie Auth Temporarily Disabled)
+// 1. Security Check with Persistent Auth
 if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
+    // Try to restore session from auth_token cookie
+    if (isset($_COOKIE['auth_token'])) {
+        try {
+            $token_hash = hash('sha256', $_COOKIE['auth_token']);
+
+            $stmt = $conn->prepare("SELECT id, name, skills FROM users WHERE auth_token = :token");
+            $stmt->execute(['token' => $token_hash]);
+
+            if ($user = $stmt->fetch()) {
+                // Restore session from valid token
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_name'] = $user['name'];
+                $_SESSION['user_skills'] = explode(',', $user['skills']);
+            }
+            else {
+                // Invalid/expired token - clear it and redirect
+                setcookie('auth_token', '', time() - 3600, '/');
+                header("Location: login.php?error=invalid_token");
+                exit();
+            }
+        }
+        catch (PDOException $e) {
+            // Database error (likely auth_token column doesn't exist)
+            // Log error and redirect to login
+            error_log("Auth token error: " . $e->getMessage());
+            setcookie('auth_token', '', time() - 3600, '/');
+            header("Location: login.php?error=db_error");
+            exit();
+        }
+    }
+    else {
+        // No session, no cookie - must login
+        header("Location: login.php");
+        exit();
+    }
 }
 
 $user_id = $_SESSION['user_id'];
@@ -254,13 +287,13 @@ endif; ?>
     <script>
         let myEventIds = [
             <?php
-$attending_check = $conn -> query("SELECT hackathon_id FROM registrations WHERE user_id = $user_id");
-        $ids = [];
-        if ($attending_check) {
-            while ($r = $attending_check -> fetch()) {
-                   $ids[] = $r['hackathon_id'];
-            }
-        }
+$attending_check = $conn->query("SELECT hackathon_id FROM registrations WHERE user_id = $user_id");
+$ids = [];
+if ($attending_check) {
+    while ($r = $attending_check->fetch()) {
+     $ids[] = $r['hackathon_id'];
+    }
+}
 echo implode(',', $ids);
 ?>
         ];
