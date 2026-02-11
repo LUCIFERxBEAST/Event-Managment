@@ -89,7 +89,27 @@ if (isset($_POST['verify'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify Email - HackHub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .auth-container {
+            max-width: 450px;
+            width: 100%;
+            padding: 20px;
+        }
+
+        .auth-card {
+            padding: 3rem 2rem;
+            text-align: center;
+        }
+    </style>
 </head>
 
 <body>
