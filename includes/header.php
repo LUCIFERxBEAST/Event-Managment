@@ -25,7 +25,7 @@ if (!isset($page_title)) {
 <body>
 
     <nav class="navbar glass-panel">
-        <a href="api/index.php" class="logo">
+        <a href="index.php" class="logo">
             🚀 HackHub
         </a>
 
@@ -33,19 +33,19 @@ if (!isset($page_title)) {
             <?php if (isset($_SESSION['user_id'])): ?>
             <!-- Logged In: Only Profile and Logout -->
             <div class="flex-center gap-1">
-                <a href="api/profile.php" class="btn btn-primary" style="padding: 0.5rem 1.5rem;">
+                <a href="profile.php" class="btn btn-primary" style="padding: 0.5rem 1.5rem;">
                     👤 My Profile
                 </a>
-                <a href="api/logout.php" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <a href="logout.php" class="btn btn-danger" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
                     Logout
                 </a>
             </div>
             <?php
 else: ?>
             <!-- Guest: Home, Events, Login -->
-            <a href="api/index.php">Home</a>
-            <a href="api/events.php">Events</a>
-            <a href="api/login.php" class="nav-btn">Login / Register</a>
+            <a href="index.php">Home</a>
+            <a href="events.php">Events</a>
+            <a href="login.php" class="nav-btn">Login / Register</a>
             <?php
 endif; ?>
         </div>
