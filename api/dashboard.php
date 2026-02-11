@@ -11,14 +11,13 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 $user_name = $_SESSION['user_name'];
-$user_skills = isset($_SESSION['user_skills']) ? explode(',', $_SESSION['user_skills']) : [];
+$user_skills = (!empty($_SESSION['user_skills'])) ? explode(',', $_SESSION['user_skills']) : [];
 
 // 2. HOSTING QUERY (Events I Created)
 $stmt = $pdo->prepare("SELECT * FROM hackathons WHERE created_by = ? ORDER BY event_start ASC");
 $stmt->execute([$user_id]);
 $hosting = $stmt->fetchAll();
 
-// 3. ATTENDING QUERY (Events I Joined)
 $attending_sql = "SELECT h.*, r.status, r.qr_code_hash 
                     FROM hackathons h 
                     JOIN registrations r ON h.id = r.hackathon_id 
@@ -282,10 +281,10 @@ endif; ?>
     <script>
         // Get IDs for polling
         let myEventIds = [
-            <?php
-$stmt_check = $pdo->prepare("SELECT hackathon_id FROM registrations WHERE user_id = ?");
-$stmt_check->execute([$user_id]);
-$ids = $stmt_check->fetchAll(PDO::FETCH_COLUMN);
+            <? php
+$stmt_check = $pdo -> prepare("SELECT hackathon_id FROM registrations WHERE user_id = ?");
+        $stmt_check -> execute([$user_id]);
+        $ids = $stmt_check -> fetchAll(PDO:: FETCH_COLUMN);
 echo implode(',', $ids);
 ?>
         ];
