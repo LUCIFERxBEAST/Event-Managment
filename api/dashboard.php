@@ -8,17 +8,25 @@ if (!isset($_SESSION['user_id'])) {
     if (isset($_COOKIE['auth_token'])) {
         $token_hash = hash('sha256', $_COOKIE['auth_token']);
 
-        $stmt = $conn->prepare("SELECT id, name, skills FROM users WHERE auth_token = :token");
-        $stmt->execute(['token' => $token_hash]);
+        try {
+            $stmt = $conn->prepare("SELECT id, name, skills FROM users WHERE auth_token = :token");
+            $stmt->execute(['token' => $token_hash]);
 
-        if ($user = $stmt->fetch()) {
-            // Restore Session
-            $_SESSION['user_id'] = $user['id'];
-            $_SESSION['user_name'] = $user['name'];
-            $_SESSION['user_skills'] = explode(',', $user['skills']);
+            if ($user = $stmt->fetch()) {
+                // Restore Session
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_name'] = $user['name'];
+                $_SESSION['user_skills'] = explode(',', $user['skills']);
+            }
+            else {
+                // Invalid Token (Security Risk?) -> Clear it
+                setcookie('auth_token', '', time() - 3600, '/');
+                header("Location: login.php");
+                exit();
+            }
         }
-        else {
-            // Invalid Token (Security Risk?) -> Clear it
+        catch (Exception $e) {
+            // DB Error -> Clear Cookie & Redirect
             setcookie('auth_token', '', time() - 3600, '/');
             header("Location: login.php");
             exit();
@@ -277,13 +285,13 @@ endif; ?>
     <script>
         let myEventIds = [
             <?php
-$attending_check = $conn->query("SELECT hackathon_id FROM registrations WHERE user_id = $user_id");
-$ids = [];
-if ($attending_check) {
-    while ($r = $attending_check->fetch()) {
-     $ids[] = $r['hackathon_id'];
-    }
-}
+$attending_check = $conn -> query("SELECT hackathon_id FROM registrations WHERE user_id = $user_id");
+        $ids = [];
+        if ($attending_check) {
+            while ($r = $attending_check -> fetch()) {
+                   $ids[] = $r['hackathon_id'];
+            }
+        }
 echo implode(',', $ids);
 ?>
         ];
