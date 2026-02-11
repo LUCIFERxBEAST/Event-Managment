@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 // -----------------------------
 
 session_start();
-include 'config/db.php';
+include '../config/db.php';
 
 // 1. Security Check
 if (!isset($_SESSION['user_id']) || !isset($_GET['event_id'])) {

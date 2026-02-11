@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'config/db.php';
+include '../config/db.php';
 
 // Security
 if (!isset($_SESSION['user_id']) || !isset($_GET['id'])) {

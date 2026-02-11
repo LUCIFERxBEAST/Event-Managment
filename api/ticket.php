@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'config/db.php';
+include '../config/db.php';
 
 // 1. Validate Request
 if (!isset($_GET['hash'])) {

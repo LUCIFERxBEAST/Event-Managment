@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'config/db.php';
+include '../config/db.php';
 
 // 1. Security: Only logged-in users can create events
 if (!isset($_SESSION['user_id'])) {

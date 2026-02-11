@@ -1,7 +1,7 @@
 <?php
 // dashboard.php
 session_start();
-include 'config/db.php';
+include '../config/db.php';
 
 // 1. Security Check
 if (!isset($_SESSION['user_id'])) {
@@ -293,7 +293,7 @@ echo implode(',', $ids);
 
         setInterval(() => {
             if (myEventIds.length === 0) return;
-            fetch('api/check_alerts.php?ids=' + myEventIds.join(','))
+            fetch('check_alerts.php?ids=' + myEventIds.join(','))
                 .then(r => r.json())
                 .then(d => {
                     if (d.status === 'alert' && d.message !== lastMsg) {

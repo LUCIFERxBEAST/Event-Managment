@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'config/db.php';
+include '../config/db.php';
 
 // Security: Kick back if no login attempt is active
 if (!isset($_SESSION['temp_login'])) {

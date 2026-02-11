@@ -5,7 +5,7 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 session_start();
-include 'config/db.php';
+include '../config/db.php';
 
 // 1. Security
 if (!isset($_SESSION['user_id']) || !isset($_GET['event_id'])) {
@@ -78,7 +78,7 @@ $count = count($participants);
             </div>
             <div>
                 <a href="manage_event.php?id=<?php echo $event_id; ?>" class="btn btn-outline-secondary me-2">← Back</a>
-                <a href="api/export_participants.php?event_id=<?php echo $event_id; ?>"
+                <a href="export_participants.php?event_id=<?php echo $event_id; ?>"
                     class="btn btn-success fw-bold">📥 Download Excel</a>
             </div>
         </div>

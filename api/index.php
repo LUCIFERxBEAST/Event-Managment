@@ -1,6 +1,6 @@
 <?php
 session_start();
-include 'config/db.php';
+include '../config/db.php';
 
 if (!isset($_GET['id'])) {
     header("Location: dashboard.php");
@@ -11,9 +11,9 @@ $event_id = $_GET['id'];
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
 
 // 1. FETCH EVENT DETAILS
-$stmt = $pdo->prepare("SELECT * FROM hackathons WHERE id = ?");
-$stmt->execute([$event_id]);
-$event = $stmt->fetch();
+$stmt = $conn->prepare("SELECT * FROM hackathons WHERE id = :id");
+$stmt->execute(['id' => $event_id]);
+$event = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$event) {
     die("Event not found!");
@@ -24,9 +24,9 @@ $is_registered = false;
 $ticket_hash = "";
 
 if ($user_id > 0) {
-    $stmt_check = $pdo->prepare("SELECT qr_code_hash FROM registrations WHERE user_id = ? AND hackathon_id = ?");
-    $stmt_check->execute([$user_id, $event_id]);
-    if ($row = $stmt_check->fetch()) {
+    $stmt = $conn->prepare("SELECT qr_code_hash FROM registrations WHERE user_id = :user_id AND hackathon_id = :event_id");
+    $stmt->execute(['user_id' => $user_id, 'event_id' => $event_id]);
+    if ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         $is_registered = true;
         $ticket_hash = $row['qr_code_hash'];
     }
@@ -43,15 +43,22 @@ if (isset($_POST['join_event']) && $user_id > 0 && !$is_registered) {
     // For now, let's set a default '0000' and ask them to update it on the ticket page.
     $default_pin = "0000";
 
-    $stmt = $pdo->prepare("INSERT INTO registrations (hackathon_id, user_id, qr_code_hash, access_pin) VALUES (?, ?, ?, ?)");
+    $stmt = $conn->prepare("INSERT INTO registrations (hackathon_id, user_id, qr_code_hash, access_pin) VALUES (:hackathon_id, :user_id, :qr_code_hash, :access_pin)");
 
-    if ($stmt->execute([$event_id, $user_id, $qr_hash, $default_pin])) {
+    try {
+        $stmt->execute([
+            'hackathon_id' => $event_id,
+            'user_id' => $user_id,
+            'qr_code_hash' => $qr_hash,
+            'access_pin' => $default_pin
+        ]);
+
         // Success! Go straight to the ticket
         echo "<script>alert('✅ Successfully Registered!'); window.location.href = 'ticket.php?hash=$qr_hash';</script>";
         exit();
     }
-    else {
-        $error = "Registration failed: " . implode(" ", $stmt->errorInfo());
+    catch (PDOException $e) {
+        $error = "Registration failed: " . $e->getMessage();
     }
 }
 ?>

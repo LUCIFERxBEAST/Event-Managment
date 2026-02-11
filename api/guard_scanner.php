@@ -53,7 +53,7 @@ if (!isset($_SESSION['guard_id']) || !isset($_SESSION['event_id'])) {
         box.innerHTML = "⏳ Verifying...";
 
         // SEND DATA TO API
-        fetch('api/process_scan.php', {
+        fetch('process_scan.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
