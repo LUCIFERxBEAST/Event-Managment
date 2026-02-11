@@ -23,23 +23,35 @@ $attending_query = "SELECT h.*, r.status, r.qr_code_hash
 $attending = $conn->query($attending_query);
 
 // 4. RECOMMENDATION QUERY
-$skill_filters = [];
+// 4. RECOMMENDATION QUERY (Fix: Use PDO Prepared Statements)
+$params = [];
+$skill_conditions = [];
+
+// Base Query
+$recommend_sql = "SELECT * FROM hackathons WHERE created_by != ? AND id NOT IN (SELECT hackathon_id FROM registrations WHERE user_id = ?)";
+$params[] = $user_id;
+$params[] = $user_id;
+
+// Dynamic Skill Filters
 if (!empty($user_skills)) {
     foreach ($user_skills as $skill) {
-        $clean_skill = $conn->real_escape_string($skill);
-        $skill_filters[] = "event_tags LIKE '%$clean_skill%'";
+        $skill = trim($skill);
+        if ($skill === '')
+            continue;
+        $skill_conditions[] = "event_tags LIKE ?";
+        $params[] = "%" . $skill . "%";
+    }
+
+    if (!empty($skill_conditions)) {
+        $recommend_sql .= " AND (" . implode(" OR ", $skill_conditions) . ")";
     }
 }
 
-$recommend_sql = "SELECT * FROM hackathons 
-                  WHERE created_by != $user_id 
-                  AND id NOT IN (SELECT hackathon_id FROM registrations WHERE user_id = $user_id)";
-
-if (!empty($skill_filters)) {
-    $recommend_sql .= " AND (" . implode(" OR ", $skill_filters) . ")";
-}
 $recommend_sql .= " LIMIT 6";
-$recommendations = $conn->query($recommend_sql);
+
+$stmt = $conn->prepare($recommend_sql);
+$stmt->execute($params);
+$recommendations = $stmt;
 ?>
 
 <!DOCTYPE html>
@@ -242,13 +254,13 @@ endif; ?>
     <script>
         let myEventIds = [
             <?php
-$attending_check = $conn->query("SELECT hackathon_id FROM registrations WHERE user_id = $user_id");
-$ids = [];
-if ($attending_check) {
-    while ($r = $attending_check->fetch()) {
-     $ids[] = $r['hackathon_id'];
-    }
-}
+$attending_check = $conn -> query("SELECT hackathon_id FROM registrations WHERE user_id = $user_id");
+        $ids = [];
+        if ($attending_check) {
+            while ($r = $attending_check -> fetch()) {
+                   $ids[] = $r['hackathon_id'];
+            }
+        }
 echo implode(',', $ids);
 ?>
         ];
